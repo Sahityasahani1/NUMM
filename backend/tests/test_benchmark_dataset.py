@@ -30,4 +30,4 @@ def test_vector_index_status_endpoint():
     assert res.status_code == 200
     data = res.json()
     assert data["dimension"] == 384
-    assert data["index_type"] == "faiss.IndexFlatIP"
+    assert data["index_type"] in ["faiss.IndexFlatIP", "faiss.IndexHNSWFlat"]

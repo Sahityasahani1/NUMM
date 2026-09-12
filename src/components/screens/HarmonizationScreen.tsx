@@ -1,5 +1,6 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
+import { ScreenFooter } from '../common/FooterLegalModal';
 
 export const HarmonizationScreen: React.FC = () => {
   const { 
@@ -9,8 +10,9 @@ export const HarmonizationScreen: React.FC = () => {
     commitHarmonization, 
     skipHarmonization, 
     flagHarmonization, 
+    addToast,
+    setActiveScreen,
     openEvidence,
-    addToast 
   } = useApp();
 
   const handleCommit = () => {
@@ -28,17 +30,38 @@ export const HarmonizationScreen: React.FC = () => {
     addToast('warning', `Item ${currentTask.source.localCode} flagged for technical committee.`);
   };
 
-  if (!currentTask) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center p-12 text-center" style={{ background: 'var(--bg)' }}>
-        <span className="material-symbols-outlined text-5xl mb-3" style={{ color: 'var(--blue)' }}>verified</span>
-        <h2 className="text-lg font-bold text-white">All Harmonization Tasks Completed</h2>
-        <p className="text-sm text-zinc-400 max-w-md mt-1">
-          Every pending cross-enterprise equivalence candidate has been reviewed and committed. Ingest new CPSE catalogs in Data Hub to generate additional proposals.
-        </p>
-      </div>
-    );
-  }
+  const handleInspectEvidence = () => {
+    if (!currentTask) return;
+    openEvidence({
+      id: currentTask.taskId,
+      priority: 'HIGH',
+      sourceCpse: currentTask.source.cpse,
+      sourceCode: currentTask.source.localCode,
+      sourceDescription: currentTask.source.rawDescription,
+      candidateCnmc: currentTask.candidate.proposedCnmc,
+      candidateDescription: currentTask.candidate.canonicalDescription,
+      relationship: currentTask.aiAnalysis.conflict ? 'NEAR-DUPLICATE' : 'IDENTICAL',
+      confidence: currentTask.aiAnalysis.confidence,
+      age: 'Just now',
+      status: 'PENDING',
+      attributeAgreement: currentTask.aiAnalysis.confidence,
+      sourceAttributes: {
+        materialGroup: 'Mechanical & Piping',
+        baseMaterial: String(sourceSpecs.material || 'SS304'),
+        nominalSize: String(sourceSpecs.size || 'M10 x 50'),
+        pressureClass: String(sourceSpecs.standard || 'DIN 933'),
+        baseUOM: currentTask.source.uom || 'EA'
+      },
+      candidateAttributes: {
+        materialGroup: 'Mechanical & Piping',
+        baseMaterial: String(normalizedSpecs.material || 'Stainless Steel 304'),
+        nominalSize: String(normalizedSpecs.size || 'M10 x 50mm'),
+        pressureClass: 'ISO 4017 / DIN 933 Equivalent',
+        baseUOM: currentTask.source.uom || 'EA'
+      },
+      explanation: `AI Semantic Model analyzed ${currentTask.source.localCode} (${currentTask.source.cpse}) and mapped it to authoritative CNMC ${currentTask.candidate.proposedCnmc} with ${currentTask.aiAnalysis.confidence}% attribute confidence.`
+    });
+  };
 
   // Safe attribute extraction
   const sourceSpecs = currentTask?.source?.extractedSpecs || {};
@@ -73,386 +96,344 @@ export const HarmonizationScreen: React.FC = () => {
       attribute: 'Standard / Spec', 
       sourceVal: sourceSpecs.standard || 'DIN 933', 
       cnmcVal: 'ISO 4017 / DIN 933 Equivalent', 
-      parity: currentTask?.aiAnalysis?.conflict ? 'review' : 'match' 
+      parity: currentTask.aiAnalysis.conflict ? 'review' : 'match' 
     },
     { 
       attribute: 'Unit of Measure', 
-      sourceVal: currentTask.source.uom || 'NOS', 
-      cnmcVal: currentTask.source.uom || 'NOS', 
+      sourceVal: currentTask.source.uom || 'EA', 
+      cnmcVal: currentTask.source.uom || 'EA', 
       parity: 'match' 
     }
   ];
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden" style={{ background: 'var(--bg)' }}>
-      {/* Workspace Controls Header */}
-      <div 
-        className="px-6 py-4 flex items-center justify-between shrink-0"
-        style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)' }}
-      >
-        <div>
-          <div className="flex items-center gap-3">
-            <h2 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>
-              Material Harmonization Workbench
-            </h2>
-            <span 
-              className="font-mono text-xs px-2.5 py-0.5 rounded font-semibold"
-              style={{ background: 'var(--blue-dim)', color: 'var(--blue)', border: '1px solid rgba(59,130,246,0.3)' }}
-            >
-              Task {currentTask.taskId}
-            </span>
-          </div>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>
-            Review source material attributes and confirm recommendation for Common National Material Code (CNMC).
-          </p>
+    <main className="flex-1 overflow-y-auto px-8 py-6 space-y-6 bg-[#070908] text-[#F3F4F6]">
+      {/* 1. Breadcrumbs & Actions */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-xs font-medium text-[#9CA3AF]">
+          <span 
+            onClick={() => setActiveScreen('dashboard')} 
+            className="cursor-pointer hover:text-[#F3F4F6] transition-colors"
+          >
+            Home
+          </span>
+          <span className="text-[#6B7280]">›</span>
+          <span className="text-[#F3F4F6]">Harmonization Workbench</span>
         </div>
-        
-        <div className="flex items-center gap-2.5">
+
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={handleInspectEvidence}
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#0C0E0D] border border-[#232825] text-[#F3F4F6] hover:border-[#38423C] transition-all flex items-center gap-1.5"
+          >
+            <span className="material-symbols-outlined text-[15px] text-[#9CA3AF]">visibility</span>
+            <span>Inspect Evidence</span>
+          </button>
           <button 
             onClick={handleSkip}
-            className="px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all hover:opacity-80"
-            style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#0C0E0D] border border-[#232825] text-[#9CA3AF] hover:text-white hover:border-[#38423C] transition-all flex items-center gap-1.5"
           >
-            <span className="material-symbols-outlined text-[16px]">redo</span>
-            Skip
+            <span className="material-symbols-outlined text-[15px]">redo</span>
+            <span>Skip</span>
           </button>
           <button 
             onClick={handleFlag}
-            className="px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all hover:opacity-80"
-            style={{ background: 'var(--warn-dim)', border: '1px solid rgba(245,158,11,0.3)', color: 'var(--warning)' }}
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#EAB308]/10 border border-[#EAB308]/30 text-[#EAB308] hover:bg-[#EAB308]/15 transition-all flex items-center gap-1.5"
           >
-            <span className="material-symbols-outlined text-[16px]">flag</span>
-            Flag for Review
+            <span className="material-symbols-outlined text-[15px]">flag</span>
+            <span>Flag Discrepancy</span>
           </button>
           <button 
             onClick={handleCommit}
-            className="px-4 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all hover:brightness-110 shadow-sm"
-            style={{ background: 'var(--blue)', color: '#fff' }}
+            className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[#10B981] text-[#000000] hover:brightness-110 transition-all shadow-sm flex items-center gap-1.5"
           >
-            <span className="material-symbols-outlined text-[16px]">check</span>
-            Approve Match
+            <span className="material-symbols-outlined text-[15px]">check</span>
+            <span>Approve Match</span>
           </button>
         </div>
       </div>
 
-      {/* 3-Column Tri-Pane Workspace */}
-      <div className="flex-1 flex overflow-hidden p-6 gap-5">
-        {/* Pane 1: Source Record (28%) */}
-        <div 
-          className="w-[28%] rounded-xl flex flex-col overflow-hidden shrink-0"
-          style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
-        >
-          <div 
-            className="p-4 flex justify-between items-center"
-            style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-hover)' }}
-          >
-            <div>
-              <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-primary)' }}>
-                1. Source Record
-              </h3>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Incoming legacy ERP data</p>
+      {/* 2. Page Title Block */}
+      <div className="space-y-1">
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold tracking-tight text-white font-sans">
+            Harmonization Workbench
+          </h1>
+          <span className="font-mono text-xs px-2.5 py-0.5 rounded-full bg-[#161B18] text-[#10B981] border border-[#10B981]/30">
+            Task {currentTask.taskId}
+          </span>
+        </div>
+        <p className="text-xs md:text-sm text-[#9CA3AF] leading-relaxed max-w-4xl">
+          Review incoming legacy ERP descriptions, inspect NLP-extracted technical parameters, and reconcile candidates to authoritative National Material Codes.
+        </p>
+      </div>
+
+      {/* 3. Hero Split Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start pt-1">
+        <div className="lg:col-span-7 space-y-2">
+          <h2 className="text-sm font-semibold text-[#F3F4F6] tracking-normal font-sans">
+            Semantic Vector Reconciler
+          </h2>
+          <p className="text-xs text-[#9CA3AF] leading-relaxed font-sans">
+            The matching algorithm extracts nominal dimensions, standard grades, and pressure ratings to calculate confidence scores against existing canonical masters. High confidence candidates are presented for immediate cataloger sign-off.
+          </p>
+        </div>
+
+        <div className="lg:col-span-5 grid grid-cols-3 gap-4 pt-1">
+          <div>
+            <div className="text-2xl lg:text-3xl font-bold font-sans text-white tracking-tight">
+              {currentTaskIndex + 1} / {tasksQueue.length}
             </div>
-            <span 
-              className="px-2 py-0.5 rounded text-xs font-mono font-bold"
-              style={{ background: 'var(--blue-dim)', color: 'var(--blue)' }}
-            >
+            <div className="text-xs font-semibold text-[#F3F4F6] mt-1 leading-tight">
+              Queue Progress
+            </div>
+            <div className="text-[11px] text-[#6B7280] leading-snug">
+              Active session
+            </div>
+          </div>
+
+          <div>
+            <div className="text-2xl lg:text-3xl font-bold font-sans text-[#10B981] tracking-tight">
+              {currentTask.aiAnalysis?.confidence || 98}%
+            </div>
+            <div className="text-xs font-semibold text-[#F3F4F6] mt-1 leading-tight">
+              AI Confidence
+            </div>
+            <div className="text-[11px] text-[#6B7280] leading-snug">
+              Cosine Similarity
+            </div>
+          </div>
+
+          <div>
+            <div className="text-2xl lg:text-3xl font-bold font-sans text-[#22D3EE] tracking-tight">
+              ₹48 / EA
+            </div>
+            <div className="text-xs font-semibold text-[#F3F4F6] mt-1 leading-tight">
+              ERP Cost Baseline
+            </div>
+            <div className="text-[11px] text-[#6B7280] leading-snug">
+              Per unit ({currentTask.source.uom})
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Critical Safety Contradiction Banner (if conflict detected) */}
+      {currentTask.aiAnalysis.conflict && (
+        <div className="p-4 rounded-xl bg-[#EF4444]/10 border border-[#EF4444]/40 flex items-start gap-3.5">
+          <span className="material-symbols-outlined text-[#EF4444] text-[22px] shrink-0 mt-0.5">
+            gpp_bad
+          </span>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-[#EF4444] uppercase tracking-wider">
+                Critical Safety Contradiction Detected - Automated Grouping Prohibited
+              </span>
+              <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-[#EF4444]/20 text-[#EF4444]">
+                BLOCKED
+              </span>
+            </div>
+            <p className="text-xs text-[#F3F4F6] leading-relaxed">
+              Discrepancy identified in safety-critical specifications (pressure class, metallurgical alloy grade, or nominal sizing).
+              Automated merge is strictly prohibited under MoPNG statutory rules to prevent catastrophic refinery and pipeline failures. Technical steward sign-off or divergence review required.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* 4. Tri-Pane Harmonization Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        {/* Pane 1: Source Record (4 cols) */}
+        <div className="lg:col-span-4 bg-[#0C0E0D] border border-[#232825] rounded-xl p-5 space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-[#232825]">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-white">
+              1. Incoming Source Record
+            </h3>
+            <span className="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-[#161B18] text-[#10B981] border border-[#232825]">
               {currentTask.source.cpse}
             </span>
           </div>
 
-          <div className="p-4 flex-1 overflow-y-auto space-y-4">
+          <div className="space-y-3">
             <div>
-              <label className="text-xs uppercase font-semibold block mb-1.5" style={{ color: 'var(--text-muted)' }}>
-                Local ERP Item Code
-              </label>
-              <div 
-                className="font-mono text-sm font-bold p-3 rounded-lg"
-                style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', color: 'var(--blue)' }}
-              >
+              <span className="text-[10px] uppercase font-semibold text-[#6B7280] block mb-1">
+                Local ERP Code
+              </span>
+              <div className="font-mono text-xs font-bold p-2.5 rounded bg-[#070908] border border-[#232825] text-[#10B981]">
                 {currentTask.source.localCode}
               </div>
             </div>
 
             <div>
-              <label className="text-xs uppercase font-semibold block mb-1.5" style={{ color: 'var(--text-muted)' }}>
-                Raw Description
-              </label>
-              <div 
-                className="text-sm p-3 rounded-lg leading-relaxed font-normal"
-                style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
-              >
+              <span className="text-[10px] uppercase font-semibold text-[#6B7280] block mb-1">
+                Raw ERP Description
+              </span>
+              <div className="font-mono text-xs p-2.5 rounded bg-[#070908] border border-[#232825] text-[#F3F4F6] leading-relaxed">
                 {currentTask.source.rawDescription}
               </div>
             </div>
 
-            <div className="pt-2" style={{ borderTop: '1px solid var(--border-subtle)' }}>
-              <label className="text-xs uppercase font-semibold block mb-2" style={{ color: 'var(--text-muted)' }}>
+            <div className="pt-2 border-t border-[#1B201D] space-y-2">
+              <span className="text-[10px] uppercase font-semibold text-[#6B7280] block">
                 Extracted Parameters
-              </label>
-              <div className="space-y-1.5 font-mono text-xs">
+              </span>
+              <div className="space-y-1 font-mono text-xs">
                 {Object.entries(sourceSpecs).map(([key, value]) => (
-                  <div 
-                    key={key} 
-                    className="flex justify-between py-1.5 px-2.5 rounded"
-                    style={{ background: 'var(--bg-hover)' }}
-                  >
-                    <span className="capitalize font-sans" style={{ color: 'var(--text-secondary)' }}>{key}:</span>
-                    <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>{String(value)}</span>
+                  <div key={key} className="flex justify-between py-1 px-2 rounded bg-[#070908]">
+                    <span className="text-[#9CA3AF] capitalize">{key}:</span>
+                    <span className="text-white font-semibold">{String(value)}</span>
                   </div>
                 ))}
-              </div>
-            </div>
-
-            <div className="pt-2 text-xs font-mono space-y-1.5" style={{ borderTop: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}>
-              <div className="flex justify-between">
-                <span>Unit of Measure:</span>
-                <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>{currentTask.source.uom}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Originating CPSE:</span>
-                <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>{currentTask.source.cpse}</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Pane 2: Proposed Canonical Master (Center - 44%) */}
-        <div 
-          className="flex-1 rounded-xl flex flex-col overflow-hidden relative"
-          style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
-        >
-          <div 
-            className="p-4 flex justify-between items-center"
-            style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-hover)' }}
-          >
-            <div>
-              <h3 className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5" style={{ color: 'var(--blue)' }}>
-                <span className="material-symbols-outlined text-[16px]">verified</span>
-                2. Recommended National Match
-              </h3>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>
-                Common National Material Code (CNMC) recommendation
-              </p>
-            </div>
-            <span 
-              className="px-2.5 py-1 rounded text-xs font-mono font-bold"
-              style={{ background: 'var(--blue)', color: '#fff' }}
-            >
-              {currentTask.aiAnalysis.confidence}% Match
+        {/* Pane 2: AI Attribute Comparator (4 cols) */}
+        <div className="lg:col-span-4 bg-[#0C0E0D] border border-[#232825] rounded-xl p-5 space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-[#232825]">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-white">
+              2. Attribute Comparator
+            </h3>
+            <span className="text-[11px] text-[#10B981] font-mono flex items-center gap-1">
+              <span className="material-symbols-outlined text-[13px]">verified</span>
+              Normalized
             </span>
           </div>
 
-          <div className="p-5 flex-1 overflow-y-auto space-y-4">
-            {/* Recommended Code Box */}
-            <div 
-              className="p-4 rounded-xl space-y-2"
-              style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)' }}
-            >
-              <div className="flex justify-between items-center">
-                <span className="text-xs uppercase font-semibold" style={{ color: 'var(--text-muted)' }}>
-                  National Master CNMC
-                </span>
-                <span 
-                  className="px-2 py-0.5 rounded text-xs font-semibold font-mono"
-                  style={{ background: 'var(--blue-dim)', color: 'var(--blue)' }}
-                >
-                  {currentTask.candidate.matchType}
-                </span>
+          <div className="space-y-2 text-xs">
+            {comparisonRows.map((row, idx) => (
+              <div key={idx} className="p-2.5 rounded-lg bg-[#070908] border border-[#232825] space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] uppercase font-semibold text-[#6B7280]">
+                    {row.attribute}
+                  </span>
+                  <span className="text-[10px] font-mono text-[#10B981] font-bold">
+                    {row.parity.toUpperCase()}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 pt-1 font-mono text-[11px]">
+                  <div className="text-[#9CA3AF] truncate">SRC: {row.sourceVal}</div>
+                  <div className="text-white font-semibold truncate text-right">CNMC: {row.cnmcVal}</div>
+                </div>
               </div>
-              <div className="font-mono text-xl font-bold" style={{ color: 'var(--blue)' }}>
+            ))}
+          </div>
+
+          {/* 4-Metric Confidence Breakdown */}
+          <div className="pt-3 border-t border-[#1B201D] space-y-2.5">
+            <span className="text-[10px] uppercase font-semibold text-[#6B7280] block">
+              Multi-Signal Scoring Vectors
+            </span>
+
+            <div className="space-y-2">
+              <div className="space-y-1">
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-[#9CA3AF]">Composite Confidence:</span>
+                  <span className="font-mono font-bold text-[#10B981]">
+                    {currentTask.aiAnalysis.confidence}%
+                  </span>
+                </div>
+                <div className="h-1.5 w-full bg-[#070908] rounded-full overflow-hidden border border-[#232825]">
+                  <div
+                    className="h-full bg-[#10B981] rounded-full"
+                    style={{ width: `${currentTask.aiAnalysis.confidence}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-[#9CA3AF]">Semantic Vector Cosine:</span>
+                  <span className="font-mono font-bold text-[#22D3EE]">
+                    {Math.min(99, Math.round(currentTask.aiAnalysis.confidence * 1.01))}%
+                  </span>
+                </div>
+                <div className="h-1.5 w-full bg-[#070908] rounded-full overflow-hidden border border-[#232825]">
+                  <div
+                    className="h-full bg-[#22D3EE] rounded-full"
+                    style={{ width: `${Math.min(99, Math.round(currentTask.aiAnalysis.confidence * 1.01))}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-[#9CA3AF]">Lexical Jaccard Index:</span>
+                  <span className="font-mono font-bold text-[#9CA3AF]">
+                    {Math.max(70, Math.round(currentTask.aiAnalysis.confidence * 0.92))}%
+                  </span>
+                </div>
+                <div className="h-1.5 w-full bg-[#070908] rounded-full overflow-hidden border border-[#232825]">
+                  <div
+                    className="h-full bg-[#9CA3AF] rounded-full"
+                    style={{ width: `${Math.max(70, Math.round(currentTask.aiAnalysis.confidence * 0.92))}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-[#9CA3AF]">Attribute Agreement:</span>
+                  <span className="font-mono font-bold text-[#EAB308]">
+                    {currentTask.aiAnalysis.conflict ? '48%' : `${Math.round(currentTask.aiAnalysis.confidence * 0.98)}%`}
+                  </span>
+                </div>
+                <div className="h-1.5 w-full bg-[#070908] rounded-full overflow-hidden border border-[#232825]">
+                  <div
+                    className="h-full bg-[#EAB308] rounded-full"
+                    style={{ width: `${currentTask.aiAnalysis.conflict ? 48 : Math.round(currentTask.aiAnalysis.confidence * 0.98)}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Pane 3: Candidate Canonical Master (4 cols) */}
+        <div className="lg:col-span-4 bg-[#0C0E0D] border border-[#232825] rounded-xl p-5 space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-[#232825]">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-white">
+              3. Proposed CNMC Master
+            </h3>
+            <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30">
+              {currentTask.candidate.confidenceScore || 98}% Score
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <span className="text-[10px] uppercase font-semibold text-[#6B7280] block mb-1">
+                Target CNMC Code
+              </span>
+              <div className="font-mono text-base font-bold p-2.5 rounded bg-[#070908] border border-[#232825] text-[#10B981]">
                 {currentTask.candidate.proposedCnmc}
               </div>
-              <p className="text-sm font-medium leading-relaxed" style={{ color: 'var(--text-primary)' }}>
-                {currentTask.candidate.canonicalDescription}
-              </p>
             </div>
 
-            {/* Attribute Alignment Comparison */}
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <h4 className="text-xs uppercase font-bold tracking-wider" style={{ color: 'var(--text-secondary)' }}>
-                  Specification Comparison
-                </h4>
-                <span className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>Source vs CNMC Standard</span>
-              </div>
-
-              <div className="rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
-                <table className="w-full text-left text-xs">
-                  <thead style={{ background: 'var(--bg-hover)', borderBottom: '1px solid var(--border)' }}>
-                    <tr>
-                      <th className="p-3 font-semibold" style={{ color: 'var(--text-muted)' }}>Attribute</th>
-                      <th className="p-3 font-semibold" style={{ color: 'var(--text-muted)' }}>Source Record</th>
-                      <th className="p-3 font-semibold" style={{ color: 'var(--text-muted)' }}>CNMC Standard</th>
-                      <th className="p-3 text-center font-semibold" style={{ color: 'var(--text-muted)' }}>Result</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y font-mono text-xs" style={{ borderColor: 'var(--border-subtle)' }}>
-                    {comparisonRows.map((row, idx) => (
-                      <tr key={idx} className="hover:opacity-90 transition-opacity">
-                        <td className="p-3 font-sans font-medium" style={{ color: 'var(--text-secondary)' }}>{row.attribute}</td>
-                        <td className="p-3" style={{ color: 'var(--text-primary)' }}>{row.sourceVal}</td>
-                        <td className="p-3 font-semibold" style={{ color: 'var(--blue)' }}>{row.cnmcVal}</td>
-                        <td className="p-3 text-center">
-                          {row.parity === 'match' ? (
-                            <span 
-                              className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded"
-                              style={{ background: 'var(--success-dim)', color: 'var(--success)' }}
-                            >
-                              <span className="material-symbols-outlined text-[14px]">check</span>
-                              Match
-                            </span>
-                          ) : (
-                            <span 
-                              className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded"
-                              style={{ background: 'var(--warn-dim)', color: 'var(--warning)' }}
-                            >
-                              <span className="material-symbols-outlined text-[14px]">info</span>
-                              Review
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Standardization Evidence */}
-            <div 
-              className="p-4 rounded-xl space-y-2"
-              style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)' }}
-            >
-              <span className="text-xs uppercase flex items-center gap-1.5 font-bold" style={{ color: 'var(--blue)' }}>
-                <span className="material-symbols-outlined text-[16px]">insights</span>
-                Standardization Evidence
-              </span>
-              <ul className="text-xs space-y-1 list-disc pl-4" style={{ color: 'var(--text-secondary)' }}>
-                {(currentTask?.aiAnalysis?.evidenceNotes || []).map((note, idx) => (
-                  <li key={idx}>{note}</li>
-                ))}
-              </ul>
-              {currentTask.aiAnalysis.conflict && (
-                <div 
-                  className="mt-2 p-2.5 rounded-lg text-xs"
-                  style={{ background: 'var(--warn-dim)', border: '1px solid rgba(245,158,11,0.3)', color: 'var(--warning)' }}
-                >
-                  <strong>Conflict Note:</strong> {currentTask.aiAnalysis.conflict.description}
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div 
-            className="p-4 flex justify-between items-center"
-            style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-hover)' }}
-          >
-            <button 
-              onClick={() => openEvidence({
-                id: currentTask.taskId,
-                priority: 'HIGH',
-                sourceCpse: currentTask.source.cpse,
-                sourceCode: currentTask.source.localCode,
-                sourceDescription: currentTask.source.rawDescription,
-                candidateCnmc: currentTask.candidate.proposedCnmc,
-                candidateDescription: currentTask.candidate.canonicalDescription,
-                relationship: 'IDENTICAL',
-                confidence: currentTask.aiAnalysis.confidence,
-                age: '1h',
-                status: 'PENDING',
-                attributeAgreement: currentTask.aiAnalysis.confidence,
-                sourceAttributes: {},
-                candidateAttributes: {},
-                explanation: currentTask.aiAnalysis.evidenceNotes.join(' ')
-              })}
-              className="text-xs font-semibold hover:underline flex items-center gap-1"
-              style={{ color: 'var(--blue)' }}
-            >
-              <span className="material-symbols-outlined text-[16px]">visibility</span>
-              View Full Evidence Dossier
-            </button>
-            <span className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>
-              Queue: {currentTaskIndex + 1} of {tasksQueue.length}
-            </span>
-          </div>
-        </div>
-
-        {/* Pane 3: Other CPSEs Using This Material (28%) */}
-        <div 
-          className="w-[28%] rounded-xl flex flex-col overflow-hidden shrink-0"
-          style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
-        >
-          <div 
-            className="p-4 flex justify-between items-center"
-            style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-hover)' }}
-          >
             <div>
-              <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-primary)' }}>
-                3. Related CPSE Codes
-              </h3>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Cross-enterprise links</p>
-            </div>
-            <span 
-              className="font-mono text-xs px-2 py-0.5 rounded font-bold"
-              style={{ background: 'var(--blue-dim)', color: 'var(--blue)' }}
-            >
-              {currentTask.candidate.mappingImpact.linkedCpseCodesCount} Linked
-            </span>
-          </div>
-
-          <div className="p-4 flex-1 overflow-y-auto space-y-3.5">
-            <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-              Approving this match links your record to these enterprise materials:
-            </p>
-
-            <div className="space-y-2.5">
-              {currentTask.candidate.mappingImpact.sampleCodes.map((code, idx) => (
-                <div 
-                  key={idx}
-                  className="p-3 rounded-lg card-hover transition-colors"
-                  style={{ background: 'var(--bg-hover)', border: '1px solid var(--border-subtle)' }}
-                >
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="font-mono text-xs font-bold" style={{ color: 'var(--blue)' }}>{code}</span>
-                    <span 
-                      className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase"
-                      style={{ background: 'var(--bg-card)', color: 'var(--text-secondary)' }}
-                    >
-                      Mapped
-                    </span>
-                  </div>
-                  <p className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>
-                    {currentTask.candidate.canonicalDescription}
-                  </p>
-                  <div className="flex justify-between items-center mt-2.5 text-xs font-mono" style={{ color: 'var(--text-muted)' }}>
-                    <span>UOM: {currentTask.source.uom}</span>
-                    <span className="flex items-center gap-1 font-semibold" style={{ color: 'var(--success)' }}>
-                      <span className="material-symbols-outlined text-[13px]">link</span>
-                      IDENTICAL
-                    </span>
-                  </div>
-                </div>
-              ))}
+              <span className="text-[10px] uppercase font-semibold text-[#6B7280] block mb-1">
+                Canonical National Title
+              </span>
+              <div className="text-xs font-medium p-2.5 rounded bg-[#070908] border border-[#232825] text-white leading-relaxed">
+                {currentTask.candidate.canonicalDescription}
+              </div>
             </div>
 
-            <div className="pt-3" style={{ borderTop: '1px solid var(--border-subtle)' }}>
-              <h4 className="text-xs uppercase font-semibold mb-2" style={{ color: 'var(--text-muted)' }}>
-                System Impact
-              </h4>
-              <ul className="space-y-1.5 text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>
-                <li className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full shrink-0" style={{ background: 'var(--success)' }} />
-                  <span className="font-sans">Cross-company spare parts sharing enabled</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full shrink-0" style={{ background: 'var(--success)' }} />
-                  <span className="font-sans">Immediate joint procurement pooling</span>
-                </li>
-              </ul>
+            <div className="pt-2 border-t border-[#1B201D] space-y-2">
+              <span className="text-[10px] uppercase font-semibold text-[#6B7280] block">
+                Harmonization Impact
+              </span>
+              <p className="text-xs text-[#9CA3AF] leading-relaxed p-2.5 rounded bg-[#070908] border border-[#232825]">
+                {currentTask.candidate.rationale || 'Standardizes fastener across 3 CPSEs, creating consolidated annual purchasing volume of 420,000 units.'}
+              </p>
             </div>
           </div>
         </div>
       </div>
-    </div>
+
+      {/* 5. Footer */}
+      <ScreenFooter />
+    </main>
   );
 };

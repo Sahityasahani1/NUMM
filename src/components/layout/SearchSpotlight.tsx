@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useApp, ScreenType } from '../../context/AppContext';
 
 const SCREEN_OPTIONS: { id: ScreenType; label: string; icon: string }[] = [
+  { id: 'home', label: 'Problem & Architecture', icon: 'account_tree' },
   { id: 'dashboard', label: 'Executive Dashboard', icon: 'dashboard' },
   { id: 'datahub', label: 'CPSE Data Hub', icon: 'database' },
   { id: 'harmonization', label: 'Harmonization Workbench', icon: 'rebase_edit' },
@@ -11,9 +12,11 @@ const SCREEN_OPTIONS: { id: ScreenType; label: string; icon: string }[] = [
   { id: 'analytics', label: 'Analytics & Savings', icon: 'monitoring' },
   { id: 'governance', label: 'Audit Trail', icon: 'gavel' },
   { id: 'settings', label: 'Settings', icon: 'settings' },
+  { id: 'support', label: 'Help & Documentation', icon: 'help_outline' },
+  { id: 'landing', label: 'Public Showcase & Benchmark', icon: 'public' },
 ];
 
-const CNMC_QUICK = ['CNMC-00018427', 'CNMC-883210', 'CNMC-104928', 'CNMC-110482', 'CNMC-00019201'];
+const CNMC_QUICK = ['CNMC-00018427', 'CNMC-00018428', 'CNMC-104928', 'CNMC-883210', 'CNMC-339011'];
 
 export const SearchSpotlight: React.FC = () => {
   const { searchOpen, setSearchOpen, setActiveScreen, navigateToMaterial, setGlobalSearch } = useApp();
@@ -31,7 +34,17 @@ export const SearchSpotlight: React.FC = () => {
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      // Ctrl+K or Cmd+K
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+      // Slash shortcut when not focused on an input or textarea
+      if (
+        e.key === '/' &&
+        !['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName) &&
+        !(e.target as HTMLElement)?.isContentEditable
+      ) {
         e.preventDefault();
         setSearchOpen(true);
       }

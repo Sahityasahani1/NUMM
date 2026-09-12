@@ -1,0 +1,10 @@
+{
+  "dataset_size_pairs": 10019,
+  "pearson_correlation": 0.9628,
+  "spearman_rank_correlation": 0.866,
+  "evaluation_loss": 0.0169,
+  "epochs": 4,
+  "loss_function": "MultipleNegativesRankingLoss",
+  "output_checkpoint": "models/custom-material-embedder",
+  "status": "CONVERGED_SUCCESS"
+}

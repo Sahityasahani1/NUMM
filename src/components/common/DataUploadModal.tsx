@@ -17,7 +17,10 @@ export const DataUploadModal: React.FC = () => {
 
   if (!uploadModalOpen) return null;
 
+  const [selectedFileObj, setSelectedFileObj] = useState<File | null>(null);
+
   const handleFileProcess = async (selectedFile: File) => {
+    setSelectedFileObj(selectedFile);
     setFile(selectedFile);
     setErrorMessage(null);
     setIsParsing(true);
@@ -55,7 +58,7 @@ export const DataUploadModal: React.FC = () => {
 
   const handleConfirmImport = () => {
     if (parsedRecords.length === 0) return;
-    importParsedRecords(parsedRecords, selectedCpse, destination);
+    importParsedRecords(parsedRecords, selectedCpse, destination, selectedFileObj || undefined);
     addToast('success', `Successfully imported ${parsedRecords.length} records into ${destination === 'review' ? 'Review Queue' : 'Master Catalog'}`);
   };
 

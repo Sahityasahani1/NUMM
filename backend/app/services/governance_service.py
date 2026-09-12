@@ -1,6 +1,6 @@
-﻿import json
+import json
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 from sqlalchemy.orm import Session
 
@@ -16,6 +16,7 @@ from app.models.equivalence_group import EquivalenceGroup, EquivalenceGroupMembe
 from app.models.mapping import CPSEMapping, MigrationRecord
 from app.models.audit import AuditEvent, ReviewDecision
 from app.models.cpse_material import CPSEMaterial
+from app.models.active_learning import TrainingTriplet
 from app.services.cnmc_generator import CNMCGenerator
 from app.services.taxonomy_service import TaxonomyService
 from app.core.config import settings
@@ -39,7 +40,7 @@ class GovernanceService:
             rule_version=settings.RULE_VERSION,
             model_version=settings.MODEL_VERSION,
             details=json.dumps(details) if details else None,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(timezone.utc)
         )
         db.add(event)
         return event
@@ -100,7 +101,7 @@ class GovernanceService:
                     unspsc_code=unspsc,
                     status=CNMCLifecycleStatus.APPROVED,
                     approved_by=actor,
-                    approved_at=datetime.utcnow()
+                    approved_at=datetime.now(timezone.utc)
                 )
                 db.add(canonical)
                 db.flush()
@@ -186,7 +187,7 @@ class GovernanceService:
             reason=reason,
             before_json=json.dumps(before_state),
             after_json=json.dumps(after_state),
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(timezone.utc)
         )
         db.add(decision)
 
@@ -199,6 +200,14 @@ class GovernanceService:
             details={"reason": reason, "action": action.value, "cnmc": group.proposed_cnmc}
         )
 
+        # Active Learning Loop: Emit labeled training triplet (Anchor, Positive, Hard Negative)
+        cls.emit_active_learning_triplet(
+            db=db,
+            group=group,
+            action=action,
+            actor=actor
+        )
+
         db.commit()
         db.refresh(group)
         return {
@@ -208,3 +217,80 @@ class GovernanceService:
             "cnmc": canonical.cnmc if canonical else group.proposed_cnmc,
             "decision_id": decision.id
         }
+
+    @classmethod
+    def emit_active_learning_triplet(
+        cls,
+        db: Session,
+        group: EquivalenceGroup,
+        action: RationalizationAction,
+        actor: str
+    ) -> Optional[TrainingTriplet]:
+        members = group.members
+        if not members:
+            return None
+
+        anchor_member = next((m for m in members if m.is_anchor == 1), members[0])
+        m_anchor = anchor_member.cpse_material
+        if not m_anchor:
+            return None
+
+        anchor_desc = m_anchor.source_description
+
+        if action in [RationalizationAction.MAP, RationalizationAction.MERGE]:
+            # Peer candidate is a non-anchor member
+            peer_member = next((m for m in members if m.id != anchor_member.id and m.cpse_material), None)
+            if peer_member and peer_member.cpse_material:
+                positive_desc = peer_member.cpse_material.source_description
+            else:
+                positive_desc = m_anchor.standardized_description or anchor_desc
+
+            # Identify a hard negative (same noun but contradictory rating or metallurgy)
+            hard_neg = db.query(CPSEMaterial).filter(
+                CPSEMaterial.id != m_anchor.id,
+                CPSEMaterial.material_noun == m_anchor.material_noun,
+                CPSEMaterial.pressure_rating != m_anchor.pressure_rating
+            ).first()
+
+            if not hard_neg:
+                hard_neg = db.query(CPSEMaterial).filter(
+                    CPSEMaterial.id != m_anchor.id
+                ).first()
+
+            if hard_neg:
+                neg_desc = hard_neg.source_description
+            else:
+                # Synthetic hard negative with contradictory pressure rating
+                neg_desc = anchor_desc.replace("150#", "600#").replace("150 LB", "600 LB").replace("CS", "SS 316")
+                if neg_desc == anchor_desc:
+                    neg_desc = f"{anchor_desc} CLASS 2500#"
+
+            triplet = TrainingTriplet(
+                id=str(uuid.uuid4()),
+                anchor_description=anchor_desc,
+                positive_description=positive_desc,
+                negative_description=neg_desc,
+                source_action=action.value,
+                actor=actor,
+                confidence_score=group.confidence_score
+            )
+            db.add(triplet)
+            return triplet
+
+        elif action in [RationalizationAction.SPLIT, RationalizationAction.RETAIN]:
+            if len(members) > 1 and members[1].cpse_material:
+                neg_desc = members[1].cpse_material.source_description
+                positive_desc = m_anchor.standardized_description or anchor_desc
+                triplet = TrainingTriplet(
+                    id=str(uuid.uuid4()),
+                    anchor_description=anchor_desc,
+                    positive_description=positive_desc,
+                    negative_description=neg_desc,
+                    source_action=action.value,
+                    actor=actor,
+                    confidence_score=group.confidence_score
+                )
+                db.add(triplet)
+                return triplet
+
+        return None

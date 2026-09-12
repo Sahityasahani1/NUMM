@@ -550,6 +550,7 @@ document.getElementById('modal-submit-btn').addEventListener('click', async () =
     document.getElementById('review-modal').classList.remove('show');
     loadEquivalenceGroups();
     loadDashboard();
+    loadAuditLogs();
   } catch (err) {
     showToast('Failed to record review: ' + err.message, 'error');
   }
@@ -597,27 +598,54 @@ document.getElementById('cnmc-search-btn').addEventListener('click', () => {
 // Audit Trail
 async function loadAuditLogs() {
   const tbody = document.getElementById('audit-tbody');
+  if (!tbody) return;
   try {
     const res = await fetch(`${API_BASE}/governance/audit-logs?limit=50`);
     const logs = await res.json();
 
-    if (logs.length === 0) {
+    if (!Array.isArray(logs) || logs.length === 0) {
       tbody.innerHTML = '<tr><td colspan="6" class="text-center">No audit events recorded yet.</td></tr>';
       return;
     }
 
-    tbody.innerHTML = logs.map(l => `
-      <tr>
-        <td>${new Date(l.timestamp).toLocaleString()}</td>
-        <td><strong>${l.actor}</strong></td>
-        <td><span class="badge badge-outline">${l.action}</span></td>
-        <td><code>${l.object_type}:${l.object_id.slice(0, 8)}</code></td>
-        <td>${l.rule_version || 'v4.0.0'}</td>
-        <td>${l.details || '-'}</td>
-      </tr>
-    `).join('');
+    tbody.innerHTML = logs.map(l => {
+      let detailContent = '-';
+      if (l.details) {
+        try {
+          const parsed = typeof l.details === 'string' ? JSON.parse(l.details) : l.details;
+          if (parsed.reason) {
+            detailContent = `<strong>Rationale:</strong> ${parsed.reason}`;
+            if (parsed.cnmc) {
+              detailContent += ` <span class="badge badge-success">Target: ${parsed.cnmc}</span>`;
+            }
+          } else if (parsed.description) {
+            detailContent = parsed.description;
+          } else {
+            detailContent = typeof l.details === 'string' ? l.details : JSON.stringify(l.details);
+          }
+        } catch {
+          detailContent = l.details;
+        }
+      }
+
+      const objId = l.object_id ? String(l.object_id).slice(0, 8) : 'N/A';
+      const isApproved = (l.action || '').includes('MERGE') || (l.action || '').includes('APPROVE') || (l.action || '').includes('MAP');
+      const badgeClass = isApproved ? 'badge-success' : 'badge-outline';
+
+      return `
+        <tr>
+          <td>${new Date(l.timestamp).toLocaleString()}</td>
+          <td><strong>${l.actor || 'SYSTEM'}</strong></td>
+          <td><span class="badge ${badgeClass}">${l.action}</span></td>
+          <td><code>${l.object_type}:${objId}</code></td>
+          <td>${l.rule_version || 'v4.0.0'}</td>
+          <td>${detailContent}</td>
+        </tr>
+      `;
+    }).join('');
   } catch (err) {
-    console.error(err);
+    console.error('Failed to load audit logs:', err);
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="color:var(--danger)">Failed to load audit logs: ${err.message}</td></tr>`;
   }
 }
 
@@ -709,6 +737,48 @@ function initHowItWorksSandboxes() {
   if (compareBtn) {
     compareBtn.addEventListener('click', runLiveComparison);
   }
+
+  // Active Learning Sync button
+  const syncBtn = document.getElementById('sync-active-learning-btn');
+  if (syncBtn) {
+    syncBtn.addEventListener('click', syncActiveLearningCycle);
+  }
+  loadActiveLearningStats();
+}
+
+async function loadActiveLearningStats() {
+  const countEl = document.getElementById('active-triplet-count');
+  if (!countEl) return;
+  try {
+    const res = await fetch(`${API_BASE}/active-learning/stats`);
+    if (!res.ok) return;
+    const data = await res.json();
+    countEl.textContent = `${data.buffered_triplets_count} triplets (${data.unprocessed_triplets_count} pending sync)`;
+  } catch (e) {
+    countEl.textContent = "0 triplets active";
+  }
+}
+
+async function syncActiveLearningCycle() {
+  const syncBtn = document.getElementById('sync-active-learning-btn');
+  if (syncBtn) {
+    syncBtn.disabled = true;
+    syncBtn.textContent = 'Syncing PyTorch Weights...';
+  }
+  try {
+    const res = await fetch(`${API_BASE}/active-learning/trigger-cycle`, { method: 'POST' });
+    if (!res.ok) throw new Error('Failed to trigger cycle');
+    const data = await res.json();
+    showToast(`Active Learning Synced: ${data.total_corpus_pairs} pairs evaluated. Pearson ${ (data.pearson_correlation * 100).toFixed(2) }%`, 'success');
+    loadActiveLearningStats();
+  } catch (err) {
+    showToast('Error syncing active learning: ' + err.message, 'error');
+  } finally {
+    if (syncBtn) {
+      syncBtn.disabled = false;
+      syncBtn.textContent = '🔄 Trigger Fine-Tuning Sync';
+    }
+  }
 }
 
 async function runLiveExtraction() {
@@ -792,17 +862,18 @@ async function runLiveComparison() {
     if (!res.ok) throw new Error('Live comparison failed');
     const data = await res.json();
 
-    const isCritical = data.has_critical_conflict;
+    const isHazard = data.deterministic_safety_hazard || data.has_critical_conflict;
     const relClass = data.relationship_type === 'IDENTICAL' ? 'badge-success' : 
                      (data.relationship_type === 'NEAR_DUPLICATE' ? 'badge-warning' : 'badge-outline');
 
     outputBox.innerHTML = `
-      ${isCritical ? `
+      ${isHazard ? `
         <div class="contradiction-alert-banner danger">
-          <div class="alert-icon">🚨</div>
+          <div class="alert-icon">🛑</div>
           <div>
-            <h5>Critical Engineering Contradiction Blocker Activated</h5>
-            <p><strong>Safety Violation:</strong> Physical attributes directly contradict. Automatic identical grouping is strictly disallowed to prevent refinery blowout or pipeline failure.</p>
+            <h5>Deterministic Safety Hazard: Zero-Rupture Physics Blocker Active</h5>
+            <p><strong>Fatal Industrial Hazard Prevented:</strong> Critical physical parameters (pressure rating, metallurgy, or size) contradict. In high-pressure energy systems, merging these would cause fatal pipeline rupture or sour gas blowout.</p>
+            <p style="margin-top:4px; font-size:12px; color:#b91c1c;"><strong>Physics Penalty Applied:</strong> Confidence score slashed by 25% and hard-capped at &le; 0.60. Automated merging strictly blocked.</p>
             <ul style="margin-left: 20px; margin-top: 6px;">
               ${data.conflicts.map(c => `<li><strong>${c}</strong></li>`).join('')}
             </ul>
@@ -812,32 +883,43 @@ async function runLiveComparison() {
         <div class="contradiction-alert-banner success">
           <div class="alert-icon">✅</div>
           <div>
-            <h5>Safe for Equivalence Consolidation</h5>
-            <p>No critical engineering contradictions detected. Attribute values and pressure/material ratings are compatible.</p>
+            <h5>100% Physics Capped &amp; Safe for Consolidation</h5>
+            <p>No critical engineering contradictions detected. Attribute values, pressure ratings, and metallurgical standards are verified compatible.</p>
           </div>
         </div>
       `}
+
+      <div style="font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">
+        ⚖️ Stage 4: The 4-Judge Tribunal Multi-Signal Scoring
+      </div>
 
       <div class="score-summary-grid">
         <div class="score-mini-card composite">
           <div class="score-label">Composite Confidence</div>
           <div class="score-val">${((data.composite_confidence_score ?? data.confidence_score ?? 0) * 100).toFixed(1)}%</div>
+          ${data.raw_composite_score && data.raw_composite_score !== data.composite_confidence_score ? `
+            <div style="font-size:10px; color:#dc2626; text-decoration:line-through;">Raw: ${(data.raw_composite_score * 100).toFixed(1)}%</div>
+          ` : ''}
         </div>
         <div class="score-mini-card">
-          <div class="score-label">Semantic Cosine</div>
-          <div class="score-val">${((data.semantic_vector_cosine_score ?? data.semantic_score ?? 0) * 100).toFixed(1)}%</div>
+          <div class="score-label">Judge 1: Semantic (35%)</div>
+          <div class="score-val">${((data.semantic_vector_cosine_score ?? 0) * 100).toFixed(1)}%</div>
+          <div class="band-desc">Dense 384-d Cosine</div>
         </div>
         <div class="score-mini-card">
-          <div class="score-label">Lexical Jaccard</div>
-          <div class="score-val">${((data.lexical_jaccard_score ?? data.lexical_score ?? 0) * 100).toFixed(1)}%</div>
+          <div class="score-label">Judge 2: Lexical (25%)</div>
+          <div class="score-val">${((data.lexical_jaccard_score ?? 0) * 100).toFixed(1)}%</div>
+          <div class="band-desc">Token Jaccard Overlap</div>
         </div>
         <div class="score-mini-card">
-          <div class="score-label">Attribute Agreement</div>
-          <div class="score-val">${((data.attribute_match_score ?? data.attribute_score ?? 0) * 100).toFixed(1)}%</div>
+          <div class="score-label">Judge 3: Attribute (30%)</div>
+          <div class="score-val">${((data.attribute_match_score ?? 0) * 100).toFixed(1)}%</div>
+          <div class="band-desc">Physical Spec Parity</div>
         </div>
         <div class="score-mini-card">
-          <div class="score-label">Relationship</div>
-          <div style="margin-top: 6px;"><span class="badge ${relClass}">${data.relationship_type}</span></div>
+          <div class="score-label">Judge 4: UOM (10%)</div>
+          <div class="score-val">${(((data.uom_compatibility_score ?? 1.0)) * 100).toFixed(0)}%</div>
+          <div class="band-desc">Unit Compatibility</div>
         </div>
       </div>
 

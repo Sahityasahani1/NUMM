@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timezone
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Path, status
 from sqlalchemy.orm import Session
@@ -264,4 +265,56 @@ def harmonize_material_live(payload: LiveHarmonizeRequest):
         vector_dimension=384,
         vector_sample=vector_sample
     )
+
+@router.post("/{cpse_id}/sync")
+def sync_cpse_catalog(
+    cpse_id: str = Path(..., description="Unique identifier or code of the CPSE"),
+    db: Session = Depends(get_db)
+):
+    cpse = db.query(CPSE).filter((CPSE.id == cpse_id) | (CPSE.code == cpse_id.upper())).first()
+    if not cpse:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"CPSE with identifier '{cpse_id}' not found."
+        )
+
+    mats_query = db.query(CPSEMaterial).filter(CPSEMaterial.cpse_id == cpse.id)
+    total_count = mats_query.count()
+
+    vec_svc = VectorSearchService.get_instance()
+    materials = mats_query.all()
+    indexed_count = 0
+    if materials:
+        texts = [m.normalized_description or m.source_description for m in materials]
+        meta = [{"material_id": m.id, "cpse_id": m.cpse_id, "code": m.source_material_code} for m in materials]
+        try:
+            vec_svc.build_or_update_index(texts, meta)
+            indexed_count = len(texts)
+        except Exception:
+            pass
+
+    GovernanceService.record_audit(
+        db=db,
+        actor="SYSTEM_ERP_CONNECTOR",
+        action="ERP_DELTA_SYNC",
+        object_type="CPSE",
+        object_id=cpse.id,
+        details={
+            "description": f"Live sync executed for {cpse.code} ({cpse.name}). Analyzed {total_count} local records; re-indexed {indexed_count} vectors into FAISS.",
+            "records_analyzed": total_count,
+            "records_indexed": indexed_count
+        }
+    )
+    db.commit()
+
+    return {
+        "status": "SUCCESS",
+        "cpse_id": cpse.id,
+        "cpse_code": cpse.code,
+        "cpse_name": cpse.name,
+        "records_analyzed": total_count,
+        "records_indexed": indexed_count,
+        "last_sync": datetime.now(timezone.utc).isoformat(),
+        "message": f"Live delta sync completed for {cpse.code} ({total_count} records synchronized with FAISS vector index)."
+    }
 

@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -15,7 +15,10 @@ from app.api.routers import (
     canonical,
     erp_export,
     analytics,
-    dataset
+    dataset,
+    system,
+    active_learning,
+    arbitrage
 )
 
 Base.metadata.create_all(bind=engine)
@@ -41,6 +44,9 @@ app.include_router(canonical.router, prefix=settings.API_V1_STR)
 app.include_router(erp_export.router, prefix=settings.API_V1_STR)
 app.include_router(analytics.router, prefix=settings.API_V1_STR)
 app.include_router(dataset.router, prefix=settings.API_V1_STR)
+app.include_router(system.router, prefix=settings.API_V1_STR)
+app.include_router(active_learning.router, prefix=settings.API_V1_STR)
+app.include_router(arbitrage.router, prefix=settings.API_V1_STR)
 
 @app.get("/api/health", tags=["Health"])
 def health_check():
@@ -51,40 +57,53 @@ def health_check():
         "project": settings.PROJECT_NAME
     }
 
+@app.get("/api/download/documentation", tags=["Documentation"])
+def download_documentation():
+    docx_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "public", "NUMM_National_Unified_Material_Master_Documentation.docx"))
+    if not os.path.exists(docx_path):
+        docx_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "docs", "NUMM_National_Unified_Material_Master_Documentation.docx"))
+    return FileResponse(
+        docx_path,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        filename="NUMM_National_Unified_Material_Master_Documentation.docx"
+    )
+
+from fastapi import Request, HTTPException
+from fastapi.responses import JSONResponse
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    import logging
+    logging.getLogger("uvicorn.error").error(f"Global unhandled exception on {request.url}: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={
+            "status": "ERROR",
+            "error": True,
+            "detail": str(exc),
+            "path": str(request.url.path),
+            "type": type(exc).__name__
+        }
+    )
+
+# Static file serving: Check for production build in dist/
 dist_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "dist"))
-frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend"))
+assets_dir = os.path.join(dist_dir, "assets")
+if os.path.exists(assets_dir):
+    app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
 
-if os.path.exists(dist_dir):
-    dist_assets = os.path.join(dist_dir, "assets")
-    if os.path.exists(dist_assets):
-        app.mount("/assets", StaticFiles(directory=dist_assets), name="assets")
-
-    theme_previews = os.path.join(dist_dir, "theme-previews")
-    if os.path.exists(theme_previews):
-        app.mount("/theme-previews", StaticFiles(directory=theme_previews), name="theme_previews")
-
-    @app.get("/{full_path:path}", include_in_schema=False)
-    def serve_react_spa(full_path: str):
-        if full_path.startswith("api") or full_path.startswith("docs") or full_path.startswith("openapi.json") or full_path.startswith("redoc"):
-            raise HTTPException(status_code=404, detail="Endpoint not found")
-        # Check if requesting a direct file in dist
-        file_candidate = os.path.join(dist_dir, full_path)
-        if full_path and os.path.exists(file_candidate) and os.path.isfile(file_candidate):
-            return FileResponse(file_candidate)
-        index_file = os.path.join(dist_dir, "index.html")
-        if os.path.exists(index_file):
-            return FileResponse(index_file)
-        return {"message": "Vite dist/index.html not found"}
-
-elif os.path.exists(frontend_dir):
-    app.mount("/static", StaticFiles(directory=frontend_dir), name="static")
-
-    @app.get("/", include_in_schema=False)
-    def serve_frontend_root():
-        index_path = os.path.join(frontend_dir, "index.html")
-        if os.path.exists(index_path):
-            return FileResponse(index_path)
-        return {"message": "Frontend index.html not found"}
+@app.get("/", include_in_schema=False)
+def serve_frontend_root():
+    index_path = os.path.join(dist_dir, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    return {
+        "platform": settings.PROJECT_NAME,
+        "status": "ONLINE",
+        "api_docs": "/docs",
+        "health": "/api/health",
+        "note": "NUMM Backend active. Start Vite frontend on http://127.0.0.1:3000 or run npm run build to serve static assets."
+    }
 
 if __name__ == "__main__":
     import uvicorn

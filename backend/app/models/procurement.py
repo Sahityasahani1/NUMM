@@ -1,8 +1,9 @@
-﻿import uuid
+import uuid
 from datetime import datetime
 from sqlalchemy import Column, String, Float, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from app.core.database import Base
+from app.models.common import get_utc_now
 
 class ProcurementRecord(Base):
     __tablename__ = "procurement_record"
@@ -18,7 +19,7 @@ class ProcurementRecord(Base):
     unit_price = Column(Float, nullable=False, default=0.0)
     total_spend = Column(Float, nullable=False, default=0.0)
     currency = Column(String(10), default="INR", nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_utc_now, nullable=False)
 
     cpse = relationship("CPSE", back_populates="procurement_records")
     cpse_material = relationship("CPSEMaterial", back_populates="procurement_records")

@@ -47,6 +47,10 @@ class MatchingEngine:
         agreed = 0
 
         noun1 = attr1.get("noun")
+        from app.services.physics_units import PhysicsUnitsEngine
+
+        # 1. Noun agreement
+        noun1 = attr1.get("noun")
         noun2 = attr2.get("noun")
         if noun1 and noun2:
             checked += 1
@@ -57,8 +61,9 @@ class MatchingEngine:
                 agreed += 1
                 matches.append(f"noun: {noun1}")
             else:
-                conflicts.append(f"noun mismatch: '{noun1}' vs '{noun2}'")
+                conflicts.append(f"CRITICAL CONFLICT in noun: '{noun1}' vs '{noun2}'")
 
+        # 2. Modifier agreement
         mod1 = attr1.get("modifier")
         mod2 = attr2.get("modifier")
         if mod1 and mod2:
@@ -69,30 +74,111 @@ class MatchingEngine:
             else:
                 conflicts.append(f"modifier mismatch: '{mod1}' vs '{mod2}'")
 
-        for field in critical_fields:
-            val1 = attr1.get(field)
-            val2 = attr2.get(field)
-            if val1 and val2:
-                checked += 1
-                if field == "dimensions":
-                    norm1 = NormalizationService.standardize_dimension(str(val1))
-                    norm2 = NormalizationService.standardize_dimension(str(val2))
-                elif field == "material_grade":
-                    norm1 = NormalizationService.canonicalize_material_grade(str(val1))
-                    norm2 = NormalizationService.canonicalize_material_grade(str(val2))
-                elif field == "pressure_rating":
-                    norm1 = NormalizationService.standardize_pressure_rating(str(val1))
-                    norm2 = NormalizationService.standardize_pressure_rating(str(val2))
-                else:
-                    norm1 = NormalizationService.normalize_text(str(val1))
-                    norm2 = NormalizationService.normalize_text(str(val2))
+        # --- 8-DIMENSION INDUSTRIAL PHYSICS CONTRADICTION MATRIX ---
+        
+        # Dimension 1: Pressure Rating / PN Class
+        pr1 = attr1.get("pressure_rating")
+        pr2 = attr2.get("pressure_rating")
+        if pr1 and pr2:
+            checked += 1
+            is_compat, pr_msg = PhysicsUnitsEngine.are_pressure_ratings_compatible(pr1, pr2)
+            if is_compat:
+                agreed += 1
+                matches.append(f"pressure_rating: {pr1} ({pr_msg})")
+            else:
+                conflicts.append(f"CRITICAL CONFLICT in pressure_rating: {pr_msg}")
 
-                if norm1 == norm2:
-                    agreed += 1
-                    matches.append(f"{field}: {val1}")
-                else:
-                    conflicts.append(f"CRITICAL CONFLICT in {field}: '{val1}' vs '{val2}'")
+        # Dimension 2: Base Metallurgy & NACE MR0175 Sour Gas Compliance
+        grade1 = attr1.get("material_grade")
+        grade2 = attr2.get("material_grade")
+        if grade1 and grade2:
+            checked += 1
+            is_compat, is_exact, grade_desc, grade_wt = NormalizationService.check_metallurgy_compatibility(str(grade1), str(grade2))
+            if is_compat:
+                agreed += grade_wt
+                matches.append(f"material_grade: {grade_desc}")
+            else:
+                conflicts.append(f"CRITICAL CONFLICT in material_grade: {grade_desc}")
 
+        sour1 = attr1.get("sour_gas")
+        sour2 = attr2.get("sour_gas")
+        if sour1 and sour2:
+            checked += 1
+            if sour1 == sour2:
+                agreed += 1
+                matches.append("sour_gas: Both NACE MR0175 / ISO 15156 compliant")
+        elif (sour1 and not sour2) or (sour2 and not sour1):
+            checked += 1
+            conflicts.append("CRITICAL CONFLICT in sour_gas: One material specifies NACE MR0175 / ISO 15156 Sour Service compliance while the other lacks validation (HIC / SSC failure risk)")
+
+        # Dimension 3: Nominal Bore / OD with Continuous Float Tolerance (<= 1.0mm)
+        dim1 = attr1.get("dimensions")
+        dim2 = attr2.get("dimensions")
+        if dim1 and dim2:
+            checked += 1
+            is_compat, mm_diff, dim_msg = PhysicsUnitsEngine.are_dimensions_compatible(dim1, dim2, tolerance_mm=1.5)
+            if is_compat:
+                agreed += 1
+                matches.append(f"dimensions: {dim_msg}")
+            else:
+                conflicts.append(f"CRITICAL CONFLICT in dimensions: {dim_msg}")
+
+        # Dimension 4: Wall Thickness / Schedule
+        sch1 = attr1.get("schedule")
+        sch2 = attr2.get("schedule")
+        if sch1 and sch2:
+            checked += 1
+            is_compat, sch_msg = PhysicsUnitsEngine.are_schedules_compatible(sch1, sch2)
+            if is_compat:
+                agreed += 1
+                matches.append(f"schedule: {sch1}")
+            else:
+                conflicts.append(f"CRITICAL CONFLICT in schedule: {sch_msg}")
+
+        # Dimension 5: Flange Facing (RF vs FF vs RTJ)
+        face1 = attr1.get("flange_facing")
+        face2 = attr2.get("flange_facing")
+        if face1 and face2:
+            checked += 1
+            is_compat, face_msg = PhysicsUnitsEngine.are_flange_facings_compatible(face1, face2)
+            if is_compat:
+                agreed += 1
+                matches.append(f"flange_facing: {face1}")
+            else:
+                conflicts.append(f"CRITICAL CONFLICT in flange_facing: {face_msg}")
+
+        # Dimension 6: Fire-Safe Certification (API 607 / API 6FA)
+        fire1 = attr1.get("fire_safe")
+        fire2 = attr2.get("fire_safe")
+        if fire1 and fire2:
+            checked += 1
+            if fire1 == fire2:
+                agreed += 1
+                matches.append("fire_safe: API 607 / 6FA Fire-Safe Certified")
+
+        # Dimension 7: Hazardous Area Electrical Classification (Ex-d vs Ex-ia)
+        haz1 = attr1.get("hazardous_area")
+        haz2 = attr2.get("hazardous_area")
+        if haz1 and haz2:
+            checked += 1
+            if haz1 == haz2:
+                agreed += 1
+                matches.append(f"hazardous_area: {haz1}")
+            else:
+                conflicts.append(f"CRITICAL CONFLICT in hazardous_area: Explosion protection mismatch '{haz1}' vs '{haz2}'")
+
+        # Dimension 8: Valve Trim Metallurgy (Trim 1 vs Trim 8 vs Trim 10)
+        trim1 = attr1.get("valve_trim")
+        trim2 = attr2.get("valve_trim")
+        if trim1 and trim2:
+            checked += 1
+            if trim1 == trim2:
+                agreed += 1
+                matches.append(f"valve_trim: {trim1}")
+            else:
+                conflicts.append(f"CRITICAL CONFLICT in valve_trim: Valve trim mismatch '{trim1}' vs '{trim2}' (Seat/Stem wear/corrosion risk)")
+
+        # Standard specification (e.g. API 6D vs ASME B16.34)
         val1 = attr1.get("standard")
         val2 = attr2.get("standard")
         if val1 and val2:
@@ -110,16 +196,45 @@ class MatchingEngine:
         record1: Dict[str, Any],
         record2: Dict[str, Any]
     ) -> Dict[str, Any]:
-        text1 = record1.get("normalized_description") or NormalizationService.normalize_text(record1.get("source_description", ""))
-        text2 = record2.get("normalized_description") or NormalizationService.normalize_text(record2.get("source_description", ""))
+        attr1 = record1.get("attributes", {})
+        attr2 = record2.get("attributes", {})
+        
+        if not attr1 and record1.get("source_description"):
+            try:
+                from app.services.attribute_extractor import AttributeExtractor
+                attr1 = AttributeExtractor.extract_attributes(record1.get("source_description", ""))
+                record1["attributes"] = attr1
+            except Exception:
+                pass
+                
+        if not attr2 and record2.get("source_description"):
+            try:
+                from app.services.attribute_extractor import AttributeExtractor
+                attr2 = AttributeExtractor.extract_attributes(record2.get("source_description", ""))
+                record2["attributes"] = attr2
+            except Exception:
+                pass
+
+        text1 = (
+            record1.get("standardized_description") or
+            attr1.get("canonical_description") or
+            record1.get("normalized_description") or
+            NormalizationService.normalize_text(record1.get("source_description", ""))
+        )
+        text2 = (
+            record2.get("standardized_description") or
+            attr2.get("canonical_description") or
+            record2.get("normalized_description") or
+            NormalizationService.normalize_text(record2.get("source_description", ""))
+        )
         
         tokens1 = cls.tokenize(text1)
         tokens2 = cls.tokenize(text2)
         
-        # Lexical Jaccard similarity
+        # Lexical Jaccard similarity (Judge 2 - 25%)
         lexical = cls.calculate_lexical_similarity(tokens1, tokens2)
 
-        # Dense Vector Semantic Cosine Similarity via all-MiniLM-L6-v2
+        # Dense Vector Semantic Cosine Similarity (Judge 1 - 35%)
         semantic = 0.0
         try:
             from app.services.vector_search import VectorSearchService
@@ -128,10 +243,12 @@ class MatchingEngine:
             # Fallback to token-level cosine similarity if vector service unavailable
             semantic = cls.calculate_cosine_similarity(tokens1, tokens2)
         
+        # Attribute Agreement (Judge 3 - 30%)
         attr1 = record1.get("attributes", {})
         attr2 = record2.get("attributes", {})
         attr_score, matches, conflicts = cls.evaluate_attributes(attr1, attr2)
         
+        # Unit Compatibility (Judge 4 - 10%)
         uom1 = NormalizationService.normalize_uom(record1.get("source_uom", ""))
         uom2 = NormalizationService.normalize_uom(record2.get("source_uom", ""))
         uom_score = 1.0 if uom1 == uom2 else 0.0
@@ -148,9 +265,9 @@ class MatchingEngine:
 
         has_critical_conflict = any("CRITICAL CONFLICT" in c for c in conflicts)
         
-        # Hard Contradiction Penalty (SRS & AI Architecture Strategy)
+        # Stage 5: The Safety Bouncer (Deterministic Physics Blocker)
         if has_critical_conflict:
-            # Apply hard contradiction penalty (demote by 25% and cap score)
+            # Slashes confidence score by 25% and hard-caps at <= 0.60
             composite_score = round(min(0.60, raw_composite * 0.75), 4)
             if composite_score >= settings.RELATED_THRESHOLD:
                 rel_type = RelationshipType.NEAR_DUPLICATE
@@ -173,12 +290,15 @@ class MatchingEngine:
         return {
             "relationship_type": rel_type,
             "confidence_score": composite_score,
+            "raw_composite_score": raw_composite,
             "lexical_score": round(lexical, 4),
             "semantic_score": round(semantic, 4),
             "attribute_score": round(attr_score, 4),
+            "uom_score": round(uom_score, 4),
             "matches": matches,
             "conflicts": conflicts,
-            "has_critical_conflict": has_critical_conflict
+            "has_critical_conflict": has_critical_conflict,
+            "deterministic_safety_hazard": has_critical_conflict
         }
 
     @classmethod

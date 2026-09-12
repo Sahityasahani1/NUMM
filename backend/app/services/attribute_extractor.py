@@ -1,6 +1,7 @@
 import re
 from typing import Dict, Any, Optional
 from app.services.normalization import NormalizationService
+from app.services.taxonomy_service import TaxonomyService
 
 class AttributeExtractor:
     NOUN_PATTERNS = [
@@ -14,7 +15,11 @@ class AttributeExtractor:
         r"\b(GASKET)\b",
         r"\b(ELBOW|TEE|REDUCER|COUPLING|NIPPLE|CAP|UNION|BEND)\b",
         r"\b(STUD BOLT|HEX BOLT|BOLT|STUD|NUT|WASHER|FASTENER)\b",
-        r"\b(CENTRIFUGAL PUMP|PUMP|COMPRESSOR|MOTOR|BEARING|SEAL)\b"
+        r"\b(CENTRIFUGAL PUMP|PUMP|COMPRESSOR|MOTOR|BEARING|SEAL)\b",
+        r"\b(TEMPERATURE TRANSMITTER|PRESSURE TRANSMITTER|FLOW TRANSMITTER|TRANSMITTER|FLOWMETER|RTD|GAUGE)\b",
+        r"\b(POWER CABLE|CONTROL CABLE|CABLE|WIRE)\b",
+        r"\b(CIRCUIT BREAKER|BREAKER|SWITCHGEAR|MCCB)\b",
+        r"\b(TURBINE OIL|COMPRESSOR OIL|LUBRICANT|GREASE|OIL)\b"
     ]
 
     MODIFIER_PATTERNS = [
@@ -28,7 +33,7 @@ class AttributeExtractor:
 
     DIMENSION_PATTERNS = [
         r"\b(\d+(?:\.\d+)?\s*MM\s*X\s*\d+(?:\.\d+)?\s*MM(?:\s*X\s*\d+(?:\.\d+)?\s*MM)?)\b",
-        r"\b(\d+(?:/\d+)?\s*(?:\"|INCH|IN|NB|DN\s*\d+))\b",
+        r"\b(\d+(?:/\d+)?\s*(?:\"|''|INCH|IN|NB|DN\s*\d+))(?!\w)",
         r"\b(DN\s*\d+)\b",
         r"\b(\d+(?:\.\d+)?\s*MM)\b",
         r"\b(SCH\s*(?:10|20|30|40|60|80|120|160|STD|XS|XXS))\b"
@@ -47,7 +52,7 @@ class AttributeExtractor:
 
     PRESSURE_RATING_PATTERNS = [
         r"(?:^|[\s,;(/])(150#|300#|600#|900#|1500#|2500#)(?:[\s,;)/]|$)",
-        r"\b(CLASS\s*(?:150|300|600|900|1500|2500))\b",
+        r"\b((?:CLASS|CL|CLS)\s*(?:150|300|400|600|800|900|1500|2500))\b",
         r"\b((?:150|300|600|900|1500|2500)\s*LB[S]?)\b",
         r"\b(PN\s*(?:10|16|25|40|64|100))\b",
         r"\b(3000\s*PSI|6000\s*PSI|10000\s*PSI)\b",
@@ -62,6 +67,33 @@ class AttributeExtractor:
         r"\b(DIN\s*\d+|IS\s*\d+)\b"
     ]
 
+    SCHEDULE_PATTERNS = [
+        r"\b((?:SCH|SCHEDULE)\s*(?:5|10S?|20|30|40S?|60|80S?|100|120|140|160|STD|XS|XXS))\b",
+        r"\b(STD|XS|XXS)\b"
+    ]
+
+    FACING_PATTERNS = [
+        r"\b(RF|RAISED\s*FACE)\b",
+        r"\b(FF|FLAT\s*FACE)\b",
+        r"\b(RTJ|RING\s*TYPE\s*JOINT)\b"
+    ]
+
+    SOUR_GAS_PATTERNS = [
+        r"\b(NACE\s*MR0175|NACE\s*MR-0175|ISO\s*15156|NACE\s*COMPLIANT|NACE|SOUR\s*SERVICE|HIC\s*TESTED)\b"
+    ]
+
+    FIRE_SAFE_PATTERNS = [
+        r"\b(API\s*607|API\s*6FA|FIRE\s*SAFE|FIRE-SAFE)\b"
+    ]
+
+    HAZARDOUS_AREA_PATTERNS = [
+        r"\b(EX\s*[-]?\s*D|EX\s*[-]?\s*IA|EX\s*[-]?\s*E|ATEX|ZONE\s*0|ZONE\s*1|FLAMEPROOF|INTRINSICALLY\s*SAFE)\b"
+    ]
+
+    TRIM_PATTERNS = [
+        r"\b(TRIM\s*(?:1|5|8|10|12|16|\d+|316SS?|304SS?|ALLOY\s*\d+|STELLITE)|STELLITE|13CR|MONEL\s*TRIM|316\s*TRIM)\b"
+    ]
+
     INVERTED_NOUN_PATTERNS = [
         (r"\bVALVE\s+(BALL|GATE|GLOBE|CHECK|BUTTERFLY|PLUG|NEEDLE|CONTROL|RELIEF|SAFETY)\b", r"\1 VALVE"),
         (r"\bFLANGE\s+(WELD\s*NECK|BLIND|SLIP\s*ON|SOCKET\s*WELD|THREADED|LAP\s*JOINT)\b", r"\1 FLANGE"),
@@ -72,6 +104,8 @@ class AttributeExtractor:
 
     @classmethod
     def extract_attributes(cls, text: str, spec_text: Optional[str] = None) -> Dict[str, Any]:
+        from app.services.physics_units import PhysicsUnitsEngine
+
         combined = text
         if spec_text:
             combined = f"{text} {spec_text}"
@@ -130,22 +164,92 @@ class AttributeExtractor:
                 standard = match.group(1).strip()
                 break
 
+        # Additional 5 safety dimensions for SOTA 8-Dimension Physics Matrix
+        schedule = None
+        for pattern in cls.SCHEDULE_PATTERNS:
+            match = re.search(pattern, normalized, re.IGNORECASE)
+            if match:
+                raw_sch = match.group(1).strip().upper()
+                raw_sch = re.sub(r'\bSCHEDULE\b', 'SCH', raw_sch)
+                if raw_sch in ["STD", "XS", "XXS"]:
+                    raw_sch = f"SCH {raw_sch}"
+                schedule = re.sub(r'\s+', ' ', raw_sch)
+                break
+
+        flange_facing = None
+        for pattern in cls.FACING_PATTERNS:
+            match = re.search(pattern, normalized, re.IGNORECASE)
+            if match:
+                raw_facing = match.group(1).strip().upper()
+                if "RAISED" in raw_facing or raw_facing == "RF":
+                    flange_facing = "RF"
+                elif "FLAT" in raw_facing or raw_facing == "FF":
+                    flange_facing = "FF"
+                elif "RING" in raw_facing or raw_facing == "RTJ":
+                    flange_facing = "RTJ"
+                break
+
+        sour_gas = None
+        for pattern in cls.SOUR_GAS_PATTERNS:
+            match = re.search(pattern, normalized, re.IGNORECASE)
+            if match:
+                sour_gas = "NACE MR0175 / ISO 15156"
+                break
+
+        fire_safe = None
+        for pattern in cls.FIRE_SAFE_PATTERNS:
+            match = re.search(pattern, normalized, re.IGNORECASE)
+            if match:
+                fire_safe = "API 607 / API 6FA Certified"
+                break
+
+        hazardous_area = None
+        for pattern in cls.HAZARDOUS_AREA_PATTERNS:
+            match = re.search(pattern, normalized, re.IGNORECASE)
+            if match:
+                hazardous_area = match.group(1).strip().upper()
+                break
+
+        valve_trim = None
+        for pattern in cls.TRIM_PATTERNS:
+            match = re.search(pattern, normalized, re.IGNORECASE)
+            if match:
+                valve_trim = match.group(1).strip().upper()
+                break
+
+        dimension_mm = PhysicsUnitsEngine.parse_dimension_to_mm(dimensions)
+        pressure_bar = PhysicsUnitsEngine.parse_pressure_to_bar(pressure_rating)
+
         canonical_description = cls.generate_canonical_description(
             noun=noun,
             modifier=modifier,
             dimensions=dimensions,
             material_grade=material_grade,
             pressure_rating=pressure_rating,
-            standard=standard
+            standard=standard,
+            schedule=schedule,
+            flange_facing=flange_facing
         )
+
+        unspsc_code, unspsc_title = TaxonomyService.classify(noun=noun, modifier=modifier)
 
         return {
             "noun": noun,
             "modifier": modifier,
             "dimensions": dimensions,
+            "dimension_mm": dimension_mm,
             "material_grade": material_grade,
             "pressure_rating": pressure_rating,
+            "pressure_bar": pressure_bar,
             "standard": standard,
+            "schedule": schedule,
+            "flange_facing": flange_facing,
+            "sour_gas": sour_gas,
+            "fire_safe": fire_safe,
+            "hazardous_area": hazardous_area,
+            "valve_trim": valve_trim,
+            "unspsc_code": unspsc_code,
+            "unspsc_title": unspsc_title,
             "canonical_description": canonical_description
         }
 
@@ -157,7 +261,9 @@ class AttributeExtractor:
         dimensions: Optional[str],
         material_grade: Optional[str],
         pressure_rating: Optional[str],
-        standard: Optional[str]
+        standard: Optional[str],
+        schedule: Optional[str] = None,
+        flange_facing: Optional[str] = None
     ) -> str:
         parts = []
         if noun:
@@ -166,10 +272,19 @@ class AttributeExtractor:
             parts.append(modifier)
         if dimensions:
             parts.append(dimensions)
+        if schedule:
+            parts.append(schedule)
         if material_grade:
-            parts.append(material_grade)
+            canon_grade = NormalizationService.canonicalize_material_grade(material_grade)
+            fam = NormalizationService.METALLURGY_FAMILIES.get(canon_grade) or NormalizationService.METALLURGY_FAMILIES.get(str(material_grade).upper())
+            if fam and "CARBON" in fam and "CARBON STEEL" not in canon_grade:
+                parts.append(f"{canon_grade} CARBON STEEL")
+            else:
+                parts.append(canon_grade)
         if pressure_rating:
             parts.append(pressure_rating)
+        if flange_facing:
+            parts.append(flange_facing)
         if standard:
             parts.append(standard)
             

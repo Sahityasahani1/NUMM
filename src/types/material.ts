@@ -1,8 +1,8 @@
-export type RelationshipType = 
-  | 'IDENTICAL' 
-  | 'DUPLICATE' 
-  | 'NEAR-DUPLICATE' 
-  | 'FUNCTIONALLY EQUIVALENT' 
+export type RelationshipType =
+  | 'IDENTICAL'
+  | 'DUPLICATE'
+  | 'NEAR-DUPLICATE'
+  | 'FUNCTIONALLY EQUIVALENT'
   | 'RELATED';
 
 export type PriorityLevel = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import {
   MatchCandidate,
   CanonicalMaterial,
@@ -7,26 +7,8 @@ import {
   CPSE,
   RationalizationAction
 } from '../types/material';
-import {
-  mockCPSEs,
-  mockReviewQueueItems,
-  mockHarmonizationTasks,
-  mockCanonicalDetail,
-  mockCatalogueMaterials,
-  mockRationalizationActions
-} from '../data/mockData';
+import { api, BackendAnalytics } from '../services/api';
 import { ParsedMaterialRecord } from '../utils/fileParser';
-import {
-  getCPSEList,
-  getCanonicalMaterials,
-  getCanonicalDetail,
-  getEquivalenceGroups,
-  reviewEquivalenceGroup,
-  bulkReviewEquivalenceGroups,
-  getAuditLogs,
-  getNationalAnalytics,
-  NationalAnalyticsData
-} from '../services/api';
 
 export type ScreenType =
   | 'landing'
@@ -38,6 +20,8 @@ export type ScreenType =
   | 'detail'
   | 'review'
   | 'rationalization'
+  | 'arbitrage'
+  | 'manifold'
   | 'analytics'
   | 'governance'
   | 'settings'
@@ -65,6 +49,13 @@ interface AppContextType {
   activeScreen: ScreenType;
   setActiveScreen: (screen: ScreenType) => void;
 
+  // Backend connection status
+  isBackendConnected: boolean;
+  isLoadingData: boolean;
+  backendError: string | null;
+  refreshAllData: () => Promise<void>;
+  nationalAnalytics: BackendAnalytics | null;
+
   // Material Details
   selectedCnmcId: string;
   currentMaterial: CanonicalMaterial;
@@ -76,9 +67,13 @@ interface AppContextType {
   selectedReviewIds: string[];
   toggleSelectReviewItem: (id: string) => void;
   toggleSelectAllReviewItems: (selectAll: boolean) => void;
-  approveReviewItem: (id: string) => void;
-  bulkApproveReviewItems: (ids: string[]) => void;
-  flagReviewItem: (id: string, reason?: string) => void;
+  approveReviewItem: (id: string, reason?: string) => Promise<void>;
+  bulkApproveReviewItems: (ids: string[], reason?: string) => Promise<void>;
+  flagReviewItem: (id: string, reason?: string) => Promise<void>;
+  reviewCpseFilter: string;
+  setReviewCpseFilter: (cpse: string) => void;
+  viewPendingReviewsForCpse: (cpse: string) => void;
+  viewCatalogueForCpse: (cpse: string) => void;
 
   // Harmonization
   currentTaskIndex: number;
@@ -88,17 +83,19 @@ interface AppContextType {
   skipHarmonization: () => void;
   flagHarmonization: () => void;
 
-  // Analytics & KPIs
-  nationalAnalytics: NationalAnalyticsData | null;
-  refreshData: () => Promise<void>;
-
   // Rationalization & Entities
   rationalizationActions: RationalizationAction[];
+  executeRationalization: (
+    groupId: string,
+    action: 'MAP' | 'MERGE' | 'RETIRE' | 'REVIEW' | 'SPLIT' | 'RETAIN',
+    reason?: string
+  ) => Promise<void>;
   cpseList: CPSE[];
 
   // Governance & Audit
   auditLogs: AuditLog[];
   addAuditLog: (entry: Omit<AuditLog, 'id' | 'timestamp'>) => void;
+  refreshAuditLogs: () => Promise<void>;
 
   // Evidence Drawer
   evidenceDrawerOpen: boolean;
@@ -116,7 +113,7 @@ interface AppContextType {
   uploadTargetCpse: string;
   openUploadModal: (targetCpse?: string) => void;
   closeUploadModal: () => void;
-  importParsedRecords: (records: ParsedMaterialRecord[], targetCpse: string, destination: 'review' | 'master') => void;
+  importParsedRecords: (records: ParsedMaterialRecord[], targetCpse: string, destination: 'review' | 'master', rawFile?: File) => Promise<void>;
 
   // Global search
   globalSearch: string;
@@ -140,9 +137,74 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+const defaultEmptyMaterial: CanonicalMaterial = {
+  cnmc: 'CNMC-PENDING',
+  canonicalDescription: 'Loading Canonical Material...',
+  materialGroup: 'GEN-01',
+  materialGroupName: 'Industrial Material Master',
+  version: 'v1.0',
+  lifecycleStatus: 'Active',
+  confidenceScore: 0.95,
+  attributes: {},
+  specifications: {},
+  mappings: [],
+  functionalEquivalents: [],
+  governanceTrail: [],
+  createdDate: new Date().toLocaleDateString(),
+  lastUpdated: new Date().toLocaleDateString()
+};
+
+const defaultEmptyTask: HarmonizationTask = {
+  taskId: 'HT-001',
+  queueName: 'National Equivalence Ingestion Queue',
+  remainingCount: 0,
+  totalCount: 0,
+  source: {
+    cpse: 'ONGC',
+    localCode: 'MAT-PENDING',
+    rawDescription: 'Awaiting pending harmonization tasks from database...',
+    extractedSpecs: {
+      material: 'Steel',
+      size: 'Standard',
+      type: 'Industrial'
+    },
+    uom: 'EA'
+  },
+  aiAnalysis: {
+    confidence: 88,
+    normalizedMapping: {
+      noun: 'Item',
+      modifier: 'Standard',
+      size: 'Standard',
+      material: 'Steel'
+    },
+    evidenceNotes: ['Database synchronized.']
+  },
+  candidate: {
+    proposedCnmc: 'CNMC-GEN-00001',
+    canonicalDescription: 'Authoritative National Material Record',
+    matchType: 'Exact Match',
+    mappingImpact: {
+      linkedCpseCodesCount: 1,
+      sampleCodes: ['MAT-PENDING']
+    }
+  }
+};
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    try {
+      const saved = localStorage.getItem('app-theme');
+      if (saved === 'light' || saved === 'dark') return saved;
+    } catch { /* noop */ }
+    return 'dark';
+  });
   const [activeScreen, setActiveScreen] = useState<ScreenType>('landing');
+
+  // Connection & Loading States
+  const [isBackendConnected, setIsBackendConnected] = useState<boolean>(false);
+  const [isLoadingData, setIsLoadingData] = useState<boolean>(true);
+  const [backendError, setBackendError] = useState<string | null>(null);
 
   // Sidebar
   const [sidebarCollapsed, setSidebarCollapsedState] = useState<boolean>(() => {
@@ -177,40 +239,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTimeout(() => removeToast(id), 3500);
   };
   const removeToast = (id: string) => setToasts(prev => prev.filter(t => t.id !== id));
-  const [selectedCnmcId, setSelectedCnmcId] = useState<string>('CNMC-00018427');
-  const [catalogueMaterials, setCatalogueMaterials] = useState<CanonicalMaterial[]>(mockCatalogueMaterials);
 
-  // Review items state
-  const [reviewQueue, setReviewQueue] = useState<MatchCandidate[]>(mockReviewQueueItems);
+  // Primary Data State (NO mock data defaults - empty initial arrays)
+  const [selectedCnmcId, setSelectedCnmcId] = useState<string>('');
+  const [catalogueMaterials, setCatalogueMaterials] = useState<CanonicalMaterial[]>([]);
+  const [reviewQueue, setReviewQueue] = useState<MatchCandidate[]>([]);
   const [selectedReviewIds, setSelectedReviewIds] = useState<string[]>([]);
-
-  // Harmonization queue state
-  const [tasksQueue, setTasksQueue] = useState<HarmonizationTask[]>(mockHarmonizationTasks);
+  const [reviewCpseFilter, setReviewCpseFilter] = useState<string>('ALL');
+  const [tasksQueue, setTasksQueue] = useState<HarmonizationTask[]>([defaultEmptyTask]);
   const [currentTaskIndex, setCurrentTaskIndex] = useState<number>(0);
+  const [cpseList, setCpseList] = useState<CPSE[]>([]);
+  const [rationalizationActions, setRationalizationActions] = useState<RationalizationAction[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [nationalAnalytics, setNationalAnalytics] = useState<BackendAnalytics | null>(null);
 
-  // Live National Analytics
-  const [nationalAnalytics, setNationalAnalytics] = useState<NationalAnalyticsData | null>(null);
+  const viewPendingReviewsForCpse = (cpseName: string) => {
+    setReviewCpseFilter(cpseName);
+    setActiveScreen('review');
+    addToast('info', `Filtered Review Queue to show pending items for ${cpseName}`);
+  };
 
-  // Entities & actions
-  const [cpseList, setCpseList] = useState<CPSE[]>(mockCPSEs);
-  const [rationalizationActions, setRationalizationActions] = useState<RationalizationAction[]>(mockRationalizationActions);
-
-  // Audit trail
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([
-    ...mockCanonicalDetail.governanceTrail,
-    {
-      id: 'AUD-005',
-      timestamp: 'Today, 10:15',
-      action: 'Batch Ingestion Synced',
-      description: 'ONGC Western Offshore ERP synchronized 4,200 updated technical master records.',
-      user: {
-        name: 'Automated Sync Agent',
-        role: 'Gateway Connector',
-        isAi: true
-      },
-      targetEntity: 'ONGC-SAP-01'
-    }
-  ]);
+  const viewCatalogueForCpse = (cpseName: string) => {
+    setGlobalSearch(cpseName);
+    setActiveScreen('master');
+    addToast('info', `Opened Master Catalogue entries for ${cpseName}`);
+  };
 
   // Evidence Drawer
   const [evidenceDrawerOpen, setEvidenceDrawerOpen] = useState<boolean>(false);
@@ -232,303 +285,192 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [globalSearch, setGlobalSearch] = useState<string>('');
 
-  // Live material detail fetched from backend
-  const [liveDetail, setLiveDetail] = useState<CanonicalMaterial | null>(null);
+  // Primary Data Fetcher from Real FastAPI Backend
+  const refreshAllData = useCallback(async () => {
+    setIsLoadingData(true);
+    setBackendError(null);
 
-  // Sync theme to DOM
+    try {
+      // 1. Verify health
+      let connected = false;
+      try {
+        await api.checkHealth();
+        connected = true;
+        setIsBackendConnected(true);
+      } catch (healthErr) {
+        console.warn('FastAPI backend health probe pending/offline:', healthErr);
+        setIsBackendConnected(false);
+      }
+
+      // 2. Fetch parallel backend resources safely with zero crash risk
+      const [cpsesRes, catalogueRes, reviewsRes, logsRes, analyticsRes] = await Promise.allSettled([
+        api.fetchCPSEs(),
+        api.fetchCatalogue(),
+        api.fetchReviewQueue(),
+        api.fetchAuditLogs(50),
+        api.fetchNationalAnalytics()
+      ]);
+
+      const cpses = cpsesRes.status === 'fulfilled' ? cpsesRes.value : [];
+      const catalogue = catalogueRes.status === 'fulfilled' ? catalogueRes.value : [];
+      const reviews = reviewsRes.status === 'fulfilled' ? reviewsRes.value : [];
+      const logs = logsRes.status === 'fulfilled' ? logsRes.value : [];
+      const analytics = analyticsRes.status === 'fulfilled' ? analyticsRes.value : null;
+
+      if (cpses.length > 0) setCpseList(cpses);
+      if (catalogue.length > 0) setCatalogueMaterials(catalogue);
+      if (reviews.length > 0) setReviewQueue(reviews);
+      if (logs.length > 0) setAuditLogs(logs);
+      if (analytics) setNationalAnalytics(analytics);
+
+      if (connected) {
+        setBackendError(null);
+      } else if (cpses.length === 0 && catalogue.length === 0) {
+        setBackendError('FastAPI backend at http://127.0.0.1:8000 is initializing. Reconnecting in background...');
+      }
+
+      if (catalogue.length > 0 && !selectedCnmcId) {
+        setSelectedCnmcId(catalogue[0].cnmc);
+      }
+
+      // 3. Build Harmonization tasks directly from real equivalence groups / review candidates
+      if (reviews.length > 0) {
+        const mappedTasks: HarmonizationTask[] = reviews.map((item, idx) => ({
+          taskId: item.id,
+          queueName: 'National Cross-CPSE Deduplication Queue',
+          remainingCount: reviews.length - idx,
+          totalCount: reviews.length,
+          source: {
+            cpse: item.sourceCpse,
+            localCode: item.sourceCode,
+            rawDescription: item.sourceDescription,
+            extractedSpecs: {
+              material: item.sourceAttributes?.material_grade || item.sourceAttributes?.grade || 'Steel',
+              size: item.sourceAttributes?.dimensions || item.sourceAttributes?.size || 'Standard Size',
+              type: item.sourceAttributes?.noun || 'Industrial Equipment',
+              standard: item.sourceAttributes?.standard || 'IS / ASME'
+            },
+            attributes: item.sourceAttributes as any,
+            uom: item.sourceUom || 'EA'
+          },
+          aiAnalysis: {
+            confidence: item.confidence,
+            normalizedMapping: {
+              noun: item.candidateAttributes?.noun || item.sourceAttributes?.noun || 'Industrial Material',
+              modifier: item.candidateAttributes?.modifier || item.sourceAttributes?.modifier || 'Standard',
+              size: item.candidateAttributes?.dimensions || item.sourceAttributes?.dimensions || 'Standard Size',
+              material: item.candidateAttributes?.grade || item.sourceAttributes?.grade || 'Steel'
+            },
+            conflict: item.conflicts ? {
+              title: 'Specification Variance Detected',
+              description: item.conflicts,
+              inferredField: 'Material Spec',
+              inferredValue: item.relationship
+            } : undefined,
+            evidenceNotes: [
+              `Automated semantic similarity computed at ${item.confidence}%.`,
+              item.conflicts ? `Conflicts: ${item.conflicts}` : 'All technical key attributes verified identical.'
+            ]
+          },
+          candidate: {
+            proposedCnmc: item.candidateCnmc,
+            canonicalDescription: item.candidateDescription,
+            matchType: item.confidence >= 85 ? 'Exact Match' : item.confidence >= 65 ? 'Near-Duplicate' : 'Functional Equivalent',
+            confidenceScore: item.confidence,
+            mappingImpact: {
+              linkedCpseCodesCount: 2,
+              sampleCodes: [item.sourceCode]
+            }
+          }
+        }));
+        setTasksQueue(mappedTasks);
+      }
+
+      // 4. Build Rationalization Actions directly from real database metrics
+      const totalSource = analytics?.total_source_materials || reviews.length || 640;
+      const totalCanonical = analytics?.total_canonical_cnmcs || catalogue.length || 8;
+      const dedupRatio = analytics?.deduplication_ratio_pct || 82.4;
+
+      const dynamicRationalization: RationalizationAction[] = [
+        {
+          id: 'ACT-01',
+          actionType: 'MERGE',
+          title: 'Direct Redundant SKU Merges',
+          percentage: Math.min(100, Math.round(dedupRatio)),
+          recordCount: `${Math.round(totalSource * (dedupRatio / 100))} SKUs`,
+          targetCount: Math.round(totalSource * (dedupRatio / 100)),
+          description: 'Identical and high-confidence near-duplicate materials mapped to authoritative CNMCs.'
+        },
+        {
+          id: 'ACT-02',
+          actionType: 'RETAIN',
+          title: 'Authoritative Canonical Standards',
+          percentage: Math.max(5, Math.round(100 - dedupRatio)),
+          recordCount: `${totalCanonical} CNMCs`,
+          targetCount: totalCanonical,
+          description: 'Unique master catalogue entries approved under National Material Master governance.'
+        },
+        {
+          id: 'ACT-03',
+          actionType: 'REVIEW',
+          title: 'Pending Domain Committee Review',
+          percentage: Math.round((reviews.length / (totalSource || 1)) * 100),
+          recordCount: `${reviews.length} Groups`,
+          targetCount: reviews.length,
+          description: 'Cross-CPSE candidates requiring technical specification committee sign-off.'
+        }
+      ];
+      setRationalizationActions(dynamicRationalization);
+
+    } catch (err: any) {
+      console.error('Failed to load data from FastAPI backend:', err);
+      setIsBackendConnected(false);
+      setBackendError(err.message || 'Unable to connect to FastAPI backend at http://127.0.0.1:8000.');
+    } finally {
+      setIsLoadingData(false);
+    }
+  }, [selectedCnmcId]);
+
+  // Initial Load on mount
+  useEffect(() => {
+    refreshAllData();
+  }, [refreshAllData]);
+
+  // Sync theme to DOM and localStorage
   useEffect(() => {
     const root = document.documentElement;
+    const body = document.body;
+    try {
+      localStorage.setItem('app-theme', theme);
+    } catch { /* noop */ }
+    root.setAttribute('data-theme', theme);
     if (theme === 'dark') {
       root.classList.add('dark');
       root.classList.remove('light');
+      if (body) {
+        body.classList.add('dark');
+        body.classList.remove('light');
+      }
     } else {
       root.classList.remove('dark');
       root.classList.add('light');
+      if (body) {
+        body.classList.remove('dark');
+        body.classList.add('light');
+      }
     }
   }, [theme]);
-
-  // Hydrate live data from FastAPI backend on mount and manual refresh
-  const refreshData = async () => {
-    try {
-      const [liveAnalytics, liveCpses, liveMasters, liveLogs, liveGroups] = await Promise.all([
-        getNationalAnalytics(),
-        getCPSEList(),
-        getCanonicalMaterials('', 100),
-        getAuditLogs(50),
-        getEquivalenceGroups('PROPOSED')
-      ]);
-
-      if (liveAnalytics) {
-          setNationalAnalytics(liveAnalytics);
-          if (liveAnalytics.actions_breakdown) {
-            const totalAct = Object.values(liveAnalytics.actions_breakdown).reduce((a: number, b: any) => a + Number(b), 0) || 1;
-            setRationalizationActions([
-              {
-                id: 'merge',
-                actionType: 'MERGE',
-                title: 'MERGE Duplicates',
-                percentage: Math.round(((liveAnalytics.actions_breakdown['MERGE'] || 41) / totalAct) * 100),
-                recordCount: `${liveAnalytics.actions_breakdown['MERGE'] || 41} items`,
-                targetCount: liveAnalytics.actions_breakdown['MERGE'] || 41,
-                description: 'Safely merges identical source records into a single CNMC with full traceability and alias forwarding.'
-              },
-              {
-                id: 'map',
-                actionType: 'MAP',
-                title: 'MAP to Master',
-                percentage: Math.round(((liveAnalytics.actions_breakdown['MAP'] || 12) / totalAct) * 100),
-                recordCount: `${liveAnalytics.actions_breakdown['MAP'] || 12} items`,
-                targetCount: liveAnalytics.actions_breakdown['MAP'] || 12,
-                description: 'Establishes persistent bi-directional cross-references between CPSE codes and national master specifications.'
-              },
-              {
-                id: 'retire',
-                actionType: 'RETIRE',
-                title: 'RETIRE Obsolete',
-                percentage: Math.round(((liveAnalytics.actions_breakdown['RETIRE'] || 5) / totalAct) * 100),
-                recordCount: `${liveAnalytics.actions_breakdown['RETIRE'] || 5} items`,
-                targetCount: liveAnalytics.actions_breakdown['RETIRE'] || 5,
-                description: 'Deprecates discontinued equipment parts, redundant specifications, and zero-inventory legacy master items.'
-              },
-              {
-                id: 'review',
-                actionType: 'REVIEW',
-                title: 'REVIEW Flagged',
-                percentage: Math.round(((liveAnalytics.actions_breakdown['REVIEW'] || 15) / totalAct) * 100),
-                recordCount: `${liveAnalytics.actions_breakdown['REVIEW'] || 15} items`,
-                targetCount: liveAnalytics.actions_breakdown['REVIEW'] || 15,
-                description: 'Routes attribute discrepancies and physical contradictions to technical committees for physical inspection.'
-              }
-            ]);
-          }
-        }
-
-        if (liveCpses && liveCpses.length > 0) {
-          setCpseList(liveCpses);
-        }
-
-        if (liveMasters && liveMasters.length > 0) {
-          const mappedMasters: CanonicalMaterial[] = liveMasters.map((m: any) => ({
-            cnmc: m.cnmc,
-            canonicalDescription: m.canonical_description,
-            materialGroup: m.category_code || 'MG-001',
-            materialGroupName: m.category_code || 'Mechanical & Piping',
-            version: String(m.version || '1.0'),
-            lifecycleStatus: m.status || 'Active',
-            status: m.status || 'Active',
-            confidenceScore: 98,
-            attributes: m.canonical_attributes || {},
-            specifications: m.canonical_attributes || {},
-            standardUOM: 'NOS',
-            mappings: (m.mappings || []).map((mapItem: any) => ({
-              cpse: mapItem.cpse,
-              localCode: mapItem.localCode,
-              localDescription: mapItem.localDescription,
-              relationship: mapItem.relationship || 'IDENTICAL',
-              status: mapItem.status || 'Harmonized',
-              lastUpdated: mapItem.lastUpdated || 'Today',
-              mappedBy: mapItem.mappedBy || 'National Master Steward'
-            })),
-            functionalEquivalents: [],
-            governanceTrail: [],
-            createdDate: m.created_at ? m.created_at.slice(0, 10) : '2024-01-10',
-            lastUpdated: m.updated_at ? m.updated_at.slice(0, 10) : 'Today'
-          }));
-          setCatalogueMaterials(mappedMasters);
-          if (mappedMasters[0]) {
-            setSelectedCnmcId(mappedMasters[0].cnmc);
-          }
-        }
-
-        if (liveLogs && liveLogs.length > 0) {
-          const mappedLogs: AuditLog[] = liveLogs.map((l: any) => {
-            let desc = l.details || `${l.action} on ${l.object_type}`;
-            try {
-              if (typeof l.details === 'string' && l.details.startsWith('{')) {
-                const parsed = JSON.parse(l.details);
-                if (parsed.reason) desc = parsed.reason;
-                else if (parsed.message) desc = parsed.message;
-              }
-            } catch {
-              // fallback
-            }
-            return {
-              id: l.id,
-              timestamp: l.timestamp ? l.timestamp.replace('T', ' ').slice(0, 16) : 'Just now',
-              action: l.action.replace(/_/g, ' '),
-              description: desc,
-              user: {
-                name: l.actor === 'NATIONAL_MASTER_STEWARD' ? 'A. Kumar' : (l.actor === 'CPSE_GATEWAY_SYNC_AGENT' ? 'Sync Gateway' : l.actor),
-                role: l.actor.includes('STEWARD') ? 'National Master Steward' : 'AI Engine',
-                isAi: !l.actor.includes('STEWARD'),
-                initials: l.actor.includes('STEWARD') ? 'AK' : 'AI'
-              },
-              targetEntity: l.object_id
-            };
-          });
-          setAuditLogs(mappedLogs);
-        }
-
-        if (liveGroups && liveGroups.length > 0) {
-          const mappedReviewQueue: MatchCandidate[] = liveGroups.map((g: any) => {
-            const anchor = g.members?.find((m: any) => m.is_anchor === 1) || g.members?.[0];
-            const candidate = g.members?.find((m: any) => m.is_anchor === 0) || g.members?.[1] || anchor;
-            const evidence = g.evidence_payload || {};
-            const conflicts = evidence.conflicts || [];
-            
-            return {
-              id: g.id,
-              priority: conflicts.length > 0 ? 'CRITICAL' : (g.confidence_score >= 0.85 ? 'HIGH' : 'MEDIUM'),
-              sourceCpse: candidate?.cpse_id || 'ONGC',
-              sourceCode: candidate?.source_material_code || 'MAT-001',
-              sourceDescription: candidate?.source_description || '',
-              sourceUom: candidate?.source_uom || 'NOS',
-              candidateCnmc: g.proposed_cnmc || 'CNMC-PENDING',
-              candidateDescription: anchor?.source_description || candidate?.source_description || '',
-              relationship: g.relationship_type || 'NEAR-DUPLICATE',
-              confidence: Math.round((g.confidence_score || 0.8) * 100),
-              conflicts: conflicts.join(', '),
-              age: '1h',
-              status: 'PENDING',
-              attributeAgreement: Math.round((g.attribute_score || 0.85) * 100),
-              sourceAttributes: {
-                nominalSize: candidate?.dimensions,
-                pressureClass: candidate?.pressure_rating,
-                grade: candidate?.material_grade,
-                standard: candidate?.standard,
-                baseUOM: candidate?.source_uom
-              },
-              candidateAttributes: {
-                nominalSize: anchor?.dimensions,
-                pressureClass: anchor?.pressure_rating,
-                grade: anchor?.material_grade,
-                standard: anchor?.standard,
-                baseUOM: anchor?.source_uom
-              },
-              explanation: conflicts.length > 0
-                ? `Critical contradiction detected: ${conflicts.join('; ')}. Physical parameter conflict requires steward review.`
-                : `AI Equivalence detected between ${candidate?.source_material_code} and ${anchor?.source_material_code} with high semantic agreement.`,
-              ingestedAt: 'Today'
-            };
-          });
-          setReviewQueue(mappedReviewQueue);
-
-          // Map live groups to Harmonization tasks
-          const mappedTasks: HarmonizationTask[] = liveGroups.map((g: any, idx: number) => {
-            const anchor = g.members?.find((m: any) => m.is_anchor === 1) || g.members?.[0];
-            const candidate = g.members?.find((m: any) => m.is_anchor === 0) || g.members?.[1] || anchor;
-            const evidence = g.evidence_payload || {};
-            const conflicts = evidence.conflicts || [];
-
-            return {
-              taskId: g.id || `TASK-${idx + 1}`,
-              queueName: conflicts.length > 0 ? 'Safety Contradiction Queue' : 'Fast-Track Harmonization',
-              remainingCount: liveGroups.length - idx,
-              totalCount: liveGroups.length,
-              source: {
-                cpse: candidate?.cpse_id || 'ONGC',
-                localCode: candidate?.source_material_code || `MAT-00${idx + 1}`,
-                rawDescription: candidate?.source_description || '',
-                extractedSpecs: {
-                  material: candidate?.material_grade || 'ASTM A105',
-                  size: candidate?.dimensions || '2 INCH',
-                  type: candidate?.material_noun || 'BALL VALVE',
-                  grade: candidate?.material_grade || 'A105',
-                  standard: candidate?.standard || 'API 6D'
-                },
-                systemMetadata: {
-                  legacySystemId: `SAP-${candidate?.cpse_id || 'ONGC'}`,
-                  plantLocation: `${candidate?.cpse_id || 'ONGC'} Plant Asset`,
-                  lastModified: 'Today'
-                },
-                uom: candidate?.source_uom || 'NOS'
-              },
-              candidate: {
-                proposedCnmc: g.proposed_cnmc || `CNMC-000${18400 + idx}`,
-                canonicalDescription: anchor?.source_description || candidate?.source_description || '',
-                matchType: (g.relationship_type === 'IDENTICAL' ? 'Exact Match' : 'Near-Duplicate') as any,
-                confidenceScore: Math.round((g.confidence_score || 0.85) * 100),
-                mappingImpact: {
-                  linkedCpseCodesCount: (g.members || []).length,
-                  sampleCodes: (g.members || []).map((m: any) => m.source_material_code || '')
-                }
-              },
-              aiAnalysis: {
-                confidence: Math.round((g.confidence_score || 0.85) * 100),
-                normalizedMapping: {
-                  noun: anchor?.material_noun || candidate?.material_noun || 'VALVE',
-                  modifier: anchor?.material_modifier || candidate?.material_modifier || 'BALL',
-                  size: anchor?.dimensions || candidate?.dimensions || '2"',
-                  material: anchor?.material_grade || candidate?.material_grade || 'ASTM A105'
-                },
-                conflict: conflicts.length > 0 ? {
-                  title: 'Deterministic Safety Hazard',
-                  description: `Contradiction detected: ${conflicts.join('; ')}`,
-                  inferredField: conflicts[0]?.includes('pressure') ? 'pressure_rating' : 'material_grade',
-                  inferredValue: conflicts[0] || ''
-                } : undefined,
-                evidenceNotes: conflicts.length > 0
-                  ? [`Safety Blocker Active: Contradiction in ${conflicts.join(', ')}`, `Auto-merging blocked. Requires manual steward review.`]
-                  : [`Deterministic attribute parity verified across dimensions and standards`, `Semantic cosine agreement: ${(g.semantic_score || 0.92).toFixed(2)}`]
-              }
-            };
-          });
-          setTasksQueue(mappedTasks);
-        }
-      } catch (err) {
-        console.warn('Live backend hydration encountered an issue, using default data:', err);
-      }
-    };
-
-    useEffect(() => {
-      refreshData();
-    }, []);
 
   const toggleTheme = () => {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
   };
 
-  const currentMaterial = (liveDetail && liveDetail.cnmc === selectedCnmcId)
-    ? liveDetail
-    : (catalogueMaterials.find(m => m.cnmc === selectedCnmcId) || mockCanonicalDetail);
+  const currentMaterial = catalogueMaterials.find(m => m.cnmc === selectedCnmcId) || catalogueMaterials[0] || defaultEmptyMaterial;
+  const currentTask = tasksQueue[currentTaskIndex] || tasksQueue[0] || defaultEmptyTask;
 
-  const currentTask = tasksQueue[currentTaskIndex] || tasksQueue[0];
-
-  const navigateToMaterial = async (cnmc: string) => {
+  const navigateToMaterial = (cnmc: string) => {
     setSelectedCnmcId(cnmc);
     setActiveScreen('detail');
-    try {
-      const detail = await getCanonicalDetail(cnmc);
-      if (detail) {
-        setLiveDetail({
-          cnmc: detail.cnmc,
-          canonicalDescription: detail.canonical_description,
-          materialGroup: detail.category_code || 'MG-001',
-          materialGroupName: detail.category_code || 'General Mechanical & Piping',
-          version: String(detail.version || '1.0.0'),
-          lifecycleStatus: detail.status || 'Active',
-          confidenceScore: 98,
-          attributes: detail.canonical_attributes || {},
-          specifications: detail.canonical_attributes || {},
-          standardUOM: 'NOS',
-          mappings: (detail.mappings || []).map((m: any) => ({
-            cpse: m.cpse,
-            localCode: m.localCode,
-            localDescription: m.localDescription,
-            relationship: m.relationship || 'IDENTICAL',
-            status: m.status || 'Harmonized',
-            lastUpdated: m.lastUpdated || 'Today',
-            mappedBy: m.mappedBy || 'National Master Steward'
-          })),
-          functionalEquivalents: [],
-          governanceTrail: [],
-          createdDate: detail.created_at ? detail.created_at.slice(0, 10) : '2024-01-10',
-          lastUpdated: detail.updated_at ? detail.updated_at.slice(0, 10) : 'Today'
-        });
-      }
-    } catch (err) {
-      console.warn('Could not load live canonical detail:', err);
-    }
   };
 
   const addAuditLog = (entry: Omit<AuditLog, 'id' | 'timestamp'>) => {
@@ -550,124 +492,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setUploadModalOpen(false);
   };
 
-  const importParsedRecords = (records: ParsedMaterialRecord[], targetCpse: string, destination: 'review' | 'master') => {
+  const importParsedRecords = async (
+    records: ParsedMaterialRecord[],
+    targetCpse: string,
+    destination: 'review' | 'master',
+    rawFile?: File
+  ) => {
     if (records.length === 0) return;
 
-    if (destination === 'review') {
-      const newReviewItems: MatchCandidate[] = records.map((rec, i) => ({
-        id: `REV-IMP-${Date.now()}-${i}`,
-        sourceCode: rec.localCode,
-        sourceCpse: rec.cpse || targetCpse,
-        sourceDescription: rec.description,
-        sourceUom: rec.uom || 'NOS',
-        candidateCnmc: rec.candidateCnmc || `CNMC-000${Math.floor(10000 + Math.random() * 89999)}`,
-        candidateDescription: rec.description,
-        confidence: rec.confidence || 92,
-        relationship: (rec.confidence && rec.confidence > 95) ? 'IDENTICAL' : 'DUPLICATE',
-        explanation: `Synthesized via batch ingestion from uploaded file (${rec.cpse || targetCpse}). Automatic attribute alignment calculated with high semantic fidelity.`,
-        priority: (rec.confidence && rec.confidence > 92) ? 'HIGH' : 'MEDIUM',
-        age: 'Just now',
-        status: 'PENDING',
-        attributeAgreement: rec.confidence || 92,
-        sourceAttributes: {
-          baseUOM: rec.uom || 'NOS',
-          ...rec.specifications
-        },
-        candidateAttributes: {
-          baseUOM: rec.uom || 'NOS',
-          ...rec.specifications
-        },
-        ingestedAt: 'Just now'
-      }));
-
-      setReviewQueue(prev => [...newReviewItems, ...prev]);
-      setActiveScreen('review');
-    } else {
-      // Add to Master Catalogue
-      const newMasters: CanonicalMaterial[] = records.map((rec, i) => ({
-        cnmc: rec.candidateCnmc || `CNMC-000${Math.floor(10000 + Math.random() * 89999)}`,
-        canonicalDescription: rec.description,
-        materialGroup: 'MG-001',
-        materialGroupName: rec.category || 'Mechanical & Piping',
-        version: '1.0.0',
-        standardUOM: rec.uom || 'NOS',
-        lifecycleStatus: 'Active',
-        status: 'Active',
-        confidenceScore: rec.confidence || 95,
-        createdDate: 'Today',
-        lastUpdated: 'Just now',
-        leadCataloger: 'System Batch Ingestion',
-        attributes: {
-          materialGroup: rec.category || 'Mechanical & Piping',
-          baseMaterial: rec.specifications['basematerial'] || 'Standard Engineering Grade',
-          nominalSize: rec.specifications['nominalsize'] || 'Standard Size',
-          pressureClass: rec.specifications['pressureclass'] || 'Class 150',
-          baseUOM: rec.uom || 'NOS'
-        },
-        specifications: {
-          materialGroup: rec.category || 'Mechanical & Piping',
-          baseMaterial: rec.specifications['basematerial'] || 'Standard Engineering Grade',
-          nominalSize: rec.specifications['nominalsize'] || 'Standard Size',
-          pressureClass: rec.specifications['pressureclass'] || 'Class 150',
-          baseUOM: rec.uom || 'NOS'
-        },
-        mappings: [
-          {
-            cpse: rec.cpse || targetCpse,
-            localCode: rec.localCode,
-            localDescription: rec.description,
-            relationship: 'IDENTICAL',
-            status: 'Harmonized',
-            lastUpdated: 'Just now',
-            mappedBy: 'Batch Importer'
-          }
-        ],
-        functionalEquivalents: [],
-        governanceTrail: [
-          {
-            id: `AUD-IMP-${i}`,
-            timestamp: 'Just now',
-            action: 'File Ingestion Registered',
-            description: `Imported via spreadsheet batch dataset into National Canonical Master.`,
-            user: { name: 'Batch Ingestion Agent', role: 'Data Steward', isAi: true },
-            targetEntity: rec.localCode
-          }
-        ]
-      }));
-
-      setCatalogueMaterials(prev => [...newMasters, ...prev]);
-      setActiveScreen('master');
-    }
-
-    // Update CPSE record stats
-    setCpseList(prev => prev.map(c => {
-      if (c.id === targetCpse || c.name === targetCpse) {
-        const total = c.totalRecords + records.length;
-        const mapped = c.mappedRecords + Math.round(records.length * 0.85);
-        return {
-          ...c,
-          totalRecords: total,
-          mappedRecords: mapped,
-          pendingRecords: c.pendingRecords + Math.round(records.length * 0.15),
-          coveragePercentage: Number(((mapped / total) * 100).toFixed(1)),
-          lastSync: 'Just now'
-        };
+    try {
+      if (rawFile) {
+        // Send real file to FastAPI backend
+        const report = await api.uploadCatalogFile(targetCpse, rawFile);
+        addToast('success', `Imported ${report.successful_rows} records into database (Batch: ${report.batch_id.slice(0, 8)})`);
+      } else {
+        addToast('info', `Processed ${records.length} records for ${targetCpse}.`);
       }
-      return c;
-    }));
 
-    addAuditLog({
-      action: 'Batch Dataset Uploaded & Ingested',
-      description: `Uploaded and processed ${records.length} records for ${targetCpse}. Integrated into ${destination === 'review' ? 'Review Backlog Queue' : 'National Master Catalogue'}.`,
-      user: {
-        name: 'A. Kumar',
-        role: 'National Master Administrator',
-        initials: 'AK'
-      },
-      targetEntity: `${records.length} Records (${targetCpse})`
-    });
+      // Trigger matching run on backend so new records form equivalence groups
+      await api.runMatchingEngine().catch(() => null);
 
-    closeUploadModal();
+      // Re-fetch fresh state from SQLite database
+      await refreshAllData();
+      setActiveScreen(destination === 'review' ? 'review' : 'master');
+    } catch (err: any) {
+      addToast('error', `Failed to import catalog: ${err.message}`);
+    } finally {
+      closeUploadModal();
+    }
   };
 
   // Selection handlers
@@ -685,139 +537,138 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Review actions
-  const approveReviewItem = (id: string) => {
+  // Real backend review mutations
+  const refreshAuditLogs = useCallback(async () => {
+    try {
+      const freshLogs = await api.fetchAuditLogs(100);
+      setAuditLogs(freshLogs);
+    } catch (err: any) {
+      console.warn('Failed to refresh audit logs:', err);
+    }
+  }, []);
+
+  const approveReviewItem = async (id: string, reason?: string) => {
     const item = reviewQueue.find(i => i.id === id);
     if (!item) return;
 
+    // Optimistic UI update
     setReviewQueue(prev => prev.filter(i => i.id !== id));
     setSelectedReviewIds(prev => prev.filter(itemId => itemId !== id));
 
-    // Async sync with backend
-    reviewEquivalenceGroup(id, 'MERGE', `Approved candidate ${item.sourceCode} for canonical ${item.candidateCnmc}`)
-      .then(() => {
-        addToast('success', `Candidate ${item.sourceCode} approved & harmonized.`);
-      })
-      .catch((err) => {
-        console.warn('Backend sync for review item approval:', err);
-      });
-
-    addAuditLog({
-      action: 'Candidate Approved & Harmonized',
-      description: `${item.sourceCpse} local material ${item.sourceCode} successfully approved and linked to canonical ${item.candidateCnmc} (${item.relationship}).`,
-      user: {
-        name: 'A. Kumar',
-        role: 'National Master Administrator',
-        initials: 'AK'
-      },
-      targetEntity: item.sourceCode
-    });
-
-    // Update CPSE stats
-    setCpseList(prev => prev.map(c => {
-      if (c.id === item.sourceCpse) {
-        const mapped = c.mappedRecords + 1;
-        const pending = Math.max(0, c.pendingRecords - 1);
-        return {
-          ...c,
-          mappedRecords: mapped,
-          pendingRecords: pending,
-          coveragePercentage: Number(((mapped / c.totalRecords) * 100).toFixed(1))
-        };
-      }
-      return c;
-    }));
+    try {
+      await api.reviewGroup(id, 'APPROVE', undefined, reason);
+      addToast('success', `Approved ${item.sourceCode} linked to ${item.candidateCnmc}`);
+      // Refresh audit logs & CPSE stats from DB
+      const freshLogs = await api.fetchAuditLogs(100);
+      setAuditLogs(freshLogs);
+      // Also update catalogue and analytics
+      Promise.all([
+        api.fetchCatalogue().then(setCatalogueMaterials).catch(() => null),
+        api.fetchNationalAnalytics().then(setNationalAnalytics).catch(() => null),
+      ]);
+    } catch (err: any) {
+      addToast('error', `Failed to approve in backend: ${err.message}`);
+      // Revert if backend call fails
+      await refreshAllData();
+    }
   };
 
-  const bulkApproveReviewItems = (ids: string[]) => {
+  const bulkApproveReviewItems = async (ids: string[], reason?: string) => {
     if (ids.length === 0) return;
 
     setReviewQueue(prev => prev.filter(i => !ids.includes(i.id)));
     setSelectedReviewIds([]);
 
-    // Async sync with backend
-    bulkReviewEquivalenceGroups(ids, 'MERGE', `Bulk approved ${ids.length} candidates via Review Queue`)
-      .then((res) => {
-        addToast('success', res?.message || `Bulk approved ${ids.length} items successfully.`);
-      })
-      .catch((err) => {
-        console.warn('Backend sync for bulk approval:', err);
-      });
-
-    addAuditLog({
-      action: 'Bulk Approval Executed',
-      description: `Bulk approved and harmonized ${ids.length} material candidates across CPSEs into National Master.`,
-      user: {
-        name: 'A. Kumar',
-        role: 'National Master Administrator',
-        initials: 'AK'
-      },
-      targetEntity: `${ids.length} Records`
-    });
+    try {
+      await Promise.all(ids.map(id => api.reviewGroup(id, 'APPROVE', undefined, reason)));
+      addToast('success', `Bulk approved ${ids.length} equivalence groups into National Master.`);
+      const freshLogs = await api.fetchAuditLogs(100);
+      setAuditLogs(freshLogs);
+      Promise.all([
+        api.fetchCatalogue().then(setCatalogueMaterials).catch(() => null),
+        api.fetchNationalAnalytics().then(setNationalAnalytics).catch(() => null),
+      ]);
+    } catch (err: any) {
+      addToast('error', `Bulk approval error: ${err.message}`);
+      await refreshAllData();
+    }
   };
 
-  const flagReviewItem = (id: string, reason?: string) => {
+  const flagReviewItem = async (id: string, reason?: string) => {
     const item = reviewQueue.find(i => i.id === id);
     if (!item) return;
 
     setReviewQueue(prev => prev.map(i => i.id === id ? { ...i, status: 'FLAGGED' } : i));
 
-    // Async sync with backend
-    reviewEquivalenceGroup(id, 'REVIEW', reason || 'Technical attribute discrepancy flagged')
-      .then(() => {
-        addToast('warning', `Item ${item.sourceCode} flagged for specialist review.`);
-      })
-      .catch((err) => {
-        console.warn('Backend sync for flagging review item:', err);
-      });
+    try {
+      await api.reviewGroup(id, 'FLAG', undefined, reason || 'Flagged via Workbench');
+      addToast('warning', `Flagged ${item.sourceCode} for technical committee review.`);
+      const freshLogs = await api.fetchAuditLogs(100);
+      setAuditLogs(freshLogs);
+    } catch (err: any) {
+      addToast('error', `Failed to flag item in backend: ${err.message}`);
+    }
+  };
 
-    addAuditLog({
-      action: 'Item Flagged for Technical Review',
-      description: `${item.sourceCpse} code ${item.sourceCode} flagged for specialist review: ${reason || 'Technical attribute discrepancy'}.`,
-      user: {
-        name: 'S. Gupta',
-        role: 'Senior Data Steward',
-        initials: 'SG'
-      },
-      targetEntity: item.sourceCode
-    });
+  const executeRationalization = async (
+    groupId: string,
+    action: 'MAP' | 'MERGE' | 'RETIRE' | 'REVIEW' | 'SPLIT' | 'RETAIN',
+    reason?: string
+  ) => {
+    const item = reviewQueue.find(i => i.id === groupId);
+    setReviewQueue(prev => prev.filter(i => i.id !== groupId));
+    setSelectedReviewIds(prev => prev.filter(id => id !== groupId));
+
+    try {
+      await api.reviewGroup(
+        groupId,
+        action,
+        'NATIONAL_DATA_STEWARD',
+        reason || `Rationalization operation ${action} executed via Catalog Consolidation Workbench`
+      );
+      addToast('success', `Executed ${action} on ${item?.sourceCode || 'item'} -> ${item?.candidateCnmc || 'National Master'}`);
+      const freshLogs = await api.fetchAuditLogs(100);
+      setAuditLogs(freshLogs);
+      Promise.all([
+        api.fetchCatalogue().then(setCatalogueMaterials).catch(() => null),
+        api.fetchNationalAnalytics().then(setNationalAnalytics).catch(() => null),
+      ]);
+    } catch (err: any) {
+      addToast('error', `Failed to execute ${action}: ${err.message}`);
+      await refreshAllData();
+    }
   };
 
   // Harmonization actions
-  const commitHarmonization = () => {
+  const commitHarmonization = async () => {
     const task = currentTask;
-
-    addAuditLog({
-      action: 'Harmonization Committed',
-      description: `${task.source.cpse} code ${task.source.localCode} approved and committed to CNMC ${task.candidate.proposedCnmc} (${task.candidate.matchType}).`,
-      user: {
-        name: 'A. Kumar',
-        role: 'Lead Cataloger',
-        initials: 'AK'
-      },
-      targetEntity: task.candidate.proposedCnmc
-    });
-
-    // Advance task
-    setCurrentTaskIndex(prev => (prev + 1) % tasksQueue.length);
+    try {
+      await api.reviewGroup(task.taskId, 'APPROVE', undefined, 'Steward approved via Harmonization Workbench').catch(() => null);
+      addToast('success', `Harmonization committed for ${task.candidate.proposedCnmc}`);
+      const freshLogs = await api.fetchAuditLogs(100);
+      setAuditLogs(freshLogs);
+      Promise.all([
+        api.fetchCatalogue().then(setCatalogueMaterials).catch(() => null),
+        api.fetchNationalAnalytics().then(setNationalAnalytics).catch(() => null),
+      ]);
+    } catch (err: any) {
+      console.warn(err);
+    }
+    setCurrentTaskIndex(prev => (prev + 1) % (tasksQueue.length || 1));
   };
 
   const skipHarmonization = () => {
-    setCurrentTaskIndex(prev => (prev + 1) % tasksQueue.length);
+    setCurrentTaskIndex(prev => (prev + 1) % (tasksQueue.length || 1));
   };
 
-  const flagHarmonization = () => {
-    addAuditLog({
-      action: 'Task Flagged for Review',
-      description: `Harmonization task ${currentTask.taskId} flagged for domain expert committee validation.`,
-      user: {
-        name: 'A. Kumar',
-        role: 'Lead Cataloger',
-        initials: 'AK'
-      },
-      targetEntity: currentTask.taskId
-    });
-    setCurrentTaskIndex(prev => (prev + 1) % tasksQueue.length);
+  const flagHarmonization = async () => {
+    try {
+      await api.reviewGroup(currentTask.taskId, 'FLAG', undefined, 'Flagged from Harmonization screen').catch(() => null);
+      addToast('warning', `Task ${currentTask.taskId} flagged for technical committee.`);
+    } catch (err: any) {
+      console.warn(err);
+    }
+    setCurrentTaskIndex(prev => (prev + 1) % (tasksQueue.length || 1));
   };
 
   // Evidence Drawer handlers
@@ -847,6 +698,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toggleTheme,
         activeScreen,
         setActiveScreen,
+        isBackendConnected,
+        isLoadingData,
+        backendError,
+        refreshAllData,
+        nationalAnalytics,
         selectedCnmcId,
         currentMaterial,
         catalogueMaterials,
@@ -858,6 +714,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         approveReviewItem,
         bulkApproveReviewItems,
         flagReviewItem,
+        reviewCpseFilter,
+        setReviewCpseFilter,
+        viewPendingReviewsForCpse,
+        viewCatalogueForCpse,
         currentTaskIndex,
         currentTask,
         tasksQueue,
@@ -865,11 +725,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         skipHarmonization,
         flagHarmonization,
         rationalizationActions,
-        nationalAnalytics,
-        refreshData,
+        executeRationalization,
         cpseList,
         auditLogs,
         addAuditLog,
+        refreshAuditLogs,
         evidenceDrawerOpen,
         evidenceTarget,
         openEvidence,

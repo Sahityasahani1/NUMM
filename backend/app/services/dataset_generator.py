@@ -1,4 +1,4 @@
-﻿import random
+import random
 import csv
 import io
 import os
@@ -101,13 +101,13 @@ class IndustrialMROBenchmarkGenerator:
     }
 
     @classmethod
-    def generate_benchmark_records(cls, count: int = 500) -> List[Dict[str, Any]]:
+    def generate_benchmark_records(cls, count: int = 738, cluster_count: int = 145) -> List[Dict[str, Any]]:
         random.seed(26099)
         records: List[Dict[str, Any]] = []
 
         # Maintain common core concepts so cross-CPSE equivalence clusters emerge naturally
         clusters = []
-        for _ in range(80):
+        for _ in range(cluster_count):
             cat = random.choice(cls.NOUN_CATEGORIES)
             cluster_concept = {
                 "noun": cat["noun"],

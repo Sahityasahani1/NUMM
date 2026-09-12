@@ -20,6 +20,12 @@ env/
 *.docm
 *.dotx
 ~$*.doc*
+!public/*.docx
+!docs/*.docx
+
+# IDE files
+.vscode/
+
 
 # Antigravity IDE agent files
 .agents/
@@ -28,12 +34,24 @@ env/
 .DS_Store
 Thumbs.db
 desktop.ini
+*.suo
+*.ntvs*
+*.njsproj
+*.sw?
 
 # Logs
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 
-# Node dependencies
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Node / frontend
 node_modules/
+dist/
+.cache/
+
+# SQLite databases
+*.db

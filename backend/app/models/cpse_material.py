@@ -1,8 +1,9 @@
-﻿import uuid
+import uuid
 from datetime import datetime
 from sqlalchemy import Column, String, Text, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from app.core.database import Base
+from app.models.common import get_utc_now
 
 class CPSEMaterial(Base):
     __tablename__ = "cpse_material"
@@ -28,7 +29,7 @@ class CPSEMaterial(Base):
     extracted_attributes = Column(Text, nullable=True)
     standardized_description = Column(Text, nullable=True)
     
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_utc_now, nullable=False)
 
     cpse = relationship("CPSE", back_populates="materials")
     group_memberships = relationship("EquivalenceGroupMember", back_populates="cpse_material", cascade="all, delete-orphan")

@@ -20,7 +20,7 @@ export const EvidenceDrawer: React.FC = () => {
   const canonical = !isCandidate ? (evidenceTarget as CanonicalMaterial) : null;
 
   const title = isCandidate 
-    ? `Match Evidence: ${candidate?.sourceCode} ➔ ${candidate?.candidateCnmc}`
+    ? `Match Evidence: ${candidate?.sourceCode} → ${candidate?.candidateCnmc}`
     : `Master Profile Evidence: ${canonical?.cnmc}`;
 
   return (
@@ -72,7 +72,7 @@ export const EvidenceDrawer: React.FC = () => {
               </span>
               <div className="flex items-center gap-3 mt-1.5">
                 <span className="font-mono text-3xl font-bold" style={{ color: 'var(--blue)' }}>
-                  {candidate ? `${candidate.confidence || 92}%` : `${canonical?.confidenceScore ?? 95}%`}
+                  {candidate ? `${candidate.confidence}%` : `${canonical?.confidenceScore}%`}
                 </span>
                 {candidate && <RelationshipBadge type={candidate.relationship} size="sm" />}
               </div>

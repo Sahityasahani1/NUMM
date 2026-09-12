@@ -1,5 +1,5 @@
 import re
-from typing import Dict
+from typing import Dict, Tuple
 
 class NormalizationService:
     ABBREVIATION_DICT: Dict[str, str] = {
@@ -39,7 +39,10 @@ class NormalizationService:
         "ELEM": "ELEMENT",
         "ASSY": "ASSEMBLY",
         "REQ": "REQUIRED",
-        "QTY": "QUANTITY"
+        "QTY": "QUANTITY",
+        "SMLS": "SEAMLESS",
+        "BLV": "BALL VALVE",
+        "BL": "BALL"
     }
 
     UOM_DICT: Dict[str, str] = {
@@ -106,6 +109,15 @@ class NormalizationService:
         
         normalized = text.upper()
         normalized = re.sub(r'[\r\n\t]+', ' ', normalized)
+
+        # Stage 1: Standardize pressure ratings (e.g. 150 LB, 150LBS, CLASS 150 -> 150#)
+        normalized = re.sub(r'\bCLASS\s*(\d+)\b', r'\1#', normalized)
+        normalized = re.sub(r'\b(\d+)\s*LB[S]?\b', r'\1#', normalized)
+
+        # Stage 1: Standardize dimensions (e.g. 2", 2IN -> 2 INCH)
+        normalized = re.sub(r'\b(\d+(?:/\d+)?)\s*\"(?!\w)', r'\1 INCH ', normalized)
+        normalized = re.sub(r'\b(\d+(?:/\d+)?)\s*IN\b', r'\1 INCH ', normalized)
+
         normalized = re.sub(r'[,;:/_\\|-]+', ' ', normalized)
         
         tokens = normalized.split()
@@ -118,6 +130,12 @@ class NormalizationService:
                 expanded_tokens.append(token)
                 
         cleaned = " ".join(expanded_tokens)
+        
+        # Stage 1: Normalize common inverted engineering noun phrases
+        cleaned = re.sub(r'\bVALVE\s+(BALL|GATE|GLOBE|CHECK|BUTTERFLY|PLUG|NEEDLE)\b', r'\1 VALVE', cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r'\bFLANGE\s+(WELD\s*NECK|BLIND|SLIP\s*ON|SOCKET\s*WELD|THREADED)\b', r'\1 FLANGE', cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r'\bPIPE\s+(SEAMLESS|ERW|WELDED)\b', r'\1 PIPE', cleaned, flags=re.IGNORECASE)
+
         cleaned = re.sub(r'\s+', ' ', cleaned).strip()
         return cleaned
 
@@ -261,9 +279,117 @@ class NormalizationService:
                 return v
         return cleaned
 
+    METALLURGY_FAMILIES: Dict[str, str] = {
+        # Carbon Steel (Forged A105, Cast WCB, Pipe A106/API 5L, Fitting WPB)
+        "ASTM A105": "CARBON_STEEL",
+        "ASTM A105N": "CARBON_STEEL",
+        "ASTM A216 WCB": "CARBON_STEEL",
+        "WCB": "CARBON_STEEL",
+        "A105": "CARBON_STEEL",
+        "ASTM A106": "CARBON_STEEL",
+        "ASTM A106 GRADE B": "CARBON_STEEL",
+        "API 5L GRADE B": "CARBON_STEEL",
+        "ASTM A234 WPB": "CARBON_STEEL",
+        "WPB": "CARBON_STEEL",
+        "CS": "CARBON_STEEL",
+        "CARBON STEEL": "CARBON_STEEL",
+        
+        # Low Temperature Carbon Steel
+        "ASTM A350 LF2": "LOW_TEMP_CARBON_STEEL",
+        "LF2": "LOW_TEMP_CARBON_STEEL",
+        "ASTM A333 GRADE 6": "LOW_TEMP_CARBON_STEEL",
+        "LTCS": "LOW_TEMP_CARBON_STEEL",
+        
+        # Stainless Steel 316 / 316L (Molybdenum-bearing austenitic)
+        "SS 316 / ASTM A182 F316": "STAINLESS_STEEL_316",
+        "SS 316": "STAINLESS_STEEL_316",
+        "SS316": "STAINLESS_STEEL_316",
+        "SS 316L": "STAINLESS_STEEL_316",
+        "SS316L": "STAINLESS_STEEL_316",
+        "ASTM A182 F316": "STAINLESS_STEEL_316",
+        "ASTM A182 F316L": "STAINLESS_STEEL_316",
+        "ASTM A312 TP316L": "STAINLESS_STEEL_316",
+        "AISI 316": "STAINLESS_STEEL_316",
+        "AISI 316L": "STAINLESS_STEEL_316",
+        "SUS 316": "STAINLESS_STEEL_316",
+        
+        # Stainless Steel 304 / 304L (Standard 18/8 austenitic)
+        "SS 304 / ASTM A182 F304": "STAINLESS_STEEL_304",
+        "SS 304": "STAINLESS_STEEL_304",
+        "SS304": "STAINLESS_STEEL_304",
+        "SS 304L": "STAINLESS_STEEL_304",
+        "SS304L": "STAINLESS_STEEL_304",
+        "ASTM A182 F304": "STAINLESS_STEEL_304",
+        "ASTM A182 F304L": "STAINLESS_STEEL_304",
+        "AISI 304": "STAINLESS_STEEL_304",
+        "AISI 304L": "STAINLESS_STEEL_304",
+        "SUS 304": "STAINLESS_STEEL_304",
+        
+        # Duplex Stainless Steel
+        "DUPLEX 2205": "DUPLEX_STEEL",
+        "SUPER DUPLEX 2507": "DUPLEX_STEEL",
+        "UNS S31803": "DUPLEX_STEEL",
+        
+        # Nickel & Special Alloys
+        "INCONEL 625": "NICKEL_ALLOY",
+        "INCONEL 718": "NICKEL_ALLOY",
+        "MONEL 400": "NICKEL_ALLOY",
+        "HASTELLOY C276": "NICKEL_ALLOY",
+        
+        # Cast Iron / Bronze
+        "CAST IRON": "CAST_IRON",
+        "BRONZE": "BRONZE",
+        "BRASS": "BRASS"
+    }
+
+    @classmethod
+    def check_metallurgy_compatibility(cls, raw_grade1: str, raw_grade2: str) -> Tuple[bool, bool, str, float]:
+        """
+        Returns:
+            (is_compatible, is_exact, description, score_weight)
+            - is_compatible: True if materials can safely coexist / be merged (e.g. A105 forged vs WCB cast carbon steel)
+            - is_exact: True if identical canonical grade
+            - description: human-readable explanation
+            - score_weight: 1.0 for exact, 0.95 for compatible within family, 0.0 for cross-family contradiction
+        """
+        if not raw_grade1 or not raw_grade2:
+            return True, True, "Neutral (No grade specified)", 1.0
+
+        canon1 = cls.canonicalize_material_grade(raw_grade1)
+        canon2 = cls.canonicalize_material_grade(raw_grade2)
+
+        if canon1 == canon2:
+            return True, True, f"Identical Grade: {canon1}", 1.0
+
+        fam1 = cls.METALLURGY_FAMILIES.get(canon1) or cls.METALLURGY_FAMILIES.get(str(raw_grade1).strip().upper())
+        fam2 = cls.METALLURGY_FAMILIES.get(canon2) or cls.METALLURGY_FAMILIES.get(str(raw_grade2).strip().upper())
+
+        # If both belong to the same metallurgical family (e.g. Carbon Steel forged A105 vs cast A216 WCB)
+        if fam1 and fam2 and fam1 == fam2:
+            return True, False, f"Compatible Metallurgy ({fam1.replace('_', ' ')}: {raw_grade1} ~ {raw_grade2})", 0.95
+
+        # Cross-family metallurgy contradiction (e.g. Carbon Steel vs Stainless Steel, or SS304 vs SS316)
+        hazard_desc = "Critical Metallurgy Contradiction"
+        if fam1 and fam2:
+            if ("CARBON" in str(fam1) and "STAINLESS" in str(fam2)) or ("CARBON" in str(fam2) and "STAINLESS" in str(fam1)):
+                hazard_desc = "Fatal Metallurgy Mismatch: Carbon Steel vs Stainless Steel (Sour Gas Acid Corrosion Risk)"
+            elif ("304" in str(fam1) and "316" in str(fam2)) or ("304" in str(fam2) and "316" in str(fam1)):
+                hazard_desc = "Metallurgy Mismatch: SS 304 vs SS 316 (Chloride Pitting Corrosion Risk)"
+            else:
+                hazard_desc = f"Incompatible Alloy Families ({fam1} vs {fam2})"
+
+        return False, False, f"{hazard_desc} ('{raw_grade1}' vs '{raw_grade2}')", 0.0
+    
     @classmethod
     def standardize_pressure_rating(cls, pr_str: str) -> str:
         if not pr_str:
             return ""
         cleaned = re.sub(r'[\s\-]+', '', str(pr_str).upper()).strip()
-        return cls.PRESSURE_RATINGS_STANDARD.get(cleaned, str(pr_str).strip().upper())
+        m = re.match(r'^(?:CLASS|CL|CLS)?\s*(\d+)(?:#|LB|LBS)?$', cleaned)
+        if m:
+            return f"{m.group(1)}#"
+        pn_m = re.match(r'^(?:PN)?\s*(\d+)$', cleaned)
+        if "PN" in cleaned and pn_m:
+            return f"PN{pn_m.group(1)}"
+        return str(pr_str).strip().upper()
+

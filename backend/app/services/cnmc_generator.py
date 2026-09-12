@@ -1,4 +1,4 @@
-﻿from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from app.models.canonical_material import CanonicalMaterial
 from app.core.config import settings
@@ -28,7 +28,7 @@ class CNMCGenerator:
                     cat = pfx
                     break
         
-        year = datetime.utcnow().year
+        year = datetime.now(timezone.utc).year
         base_prefix = f"{settings.CNMC_PREFIX}-{cat}-{year}-"
         
         existing = db.query(CanonicalMaterial.cnmc).filter(

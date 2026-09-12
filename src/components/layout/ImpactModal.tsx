@@ -60,7 +60,7 @@ export const ImpactModal: React.FC = () => {
             <div className="font-bold">{impactModal.sourceCode}</div>
             {impactModal.targetCnmc && (
               <div className="mt-1 font-semibold flex items-center gap-1.5" style={{ color: 'var(--blue)' }}>
-                <span>➔</span> Target Canonical: {impactModal.targetCnmc}
+                <span className="material-symbols-outlined text-[15px]">arrow_forward</span> Target Canonical: {impactModal.targetCnmc}
               </div>
             )}
           </div>

@@ -1,0 +1,22 @@
+*   [33m96e5592[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Merge pull request #2 from Ksomani56/Sahitya-Complete
+[31m|[m[32m\[m  
+[31m|[m * [33m0924b65[m[33m ([m[1;31morigin/sahitya-backend[m[33m)[m feat: complete national unified material master platform (backend, frontend, scripts, data)
+[31m|[m[31m/[m  
+*   [33m3daea89[m[33m ([m[1;31morigin/Sahitya-Complete[m[33m)[m Merge pull request #1 from Ksomani56/ui-salesOP
+[33m|[m[34m\[m  
+* [34m|[m [33mcd77c6d[m Update README title for NUMM project
+[34m|[m [34m|[m * [33mf7b9636[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mui-salesOP[m[33m, [m[1;31morigin/ui-salesOP[m[33m)[m feat: implement main application shell and analytics dashboard with KPI metrics and procurement visualizations
+[34m|[m [34m|[m[34m/[m  
+[34m|[m * [33m50e6882[m feat-ui purple giess font redesign
+[34m|[m * [33me8c3ae7[m feat(ui): replicate V0 SalesOps dashboard 1:1 with pure black canvas, cyan/emerald dual area chart, and exact card architecture
+[34m|[m * [33mdac1f1e[m style: set dark mode background and surfaces to pure black and neutral zinc
+[34m|[m * [33mf50d1c0[m feat(ui): unify all 10 screens with SalesOps blue theme, larger typography, visualizations, and toast system
+[34m|[m * [33ma8acb1f[m feat(ui): full SalesOps rebuild - landing page, collapsible accordion sidebar, search spotlight, toast system, blue accent, animation system
+[34m|[m * [33m7a1a4dd[m feat(ui): complete SalesOps redesign - area chart, Inter font, pure black zinc surfaces, reference-matched layout
+[34m|[m * [33m78d7891[m refactor(ui): elevate Executive Dashboard, AppShell, and TopAppBar to SalesOps standard
+[34m|[m * [33m5e3f8c1[m feat(ui): implement SalesOps + CMS visual redefinition per SIH26099_UI_Redefinition_v2
+[34m|[m * [33mfcae80e[m[33m ([m[1;31morigin/refineUI[m[33m, [m[1;32mrefineUI[m[33m)[m feat: add landing home screen explaining problem context, live resolution demonstration, and system workflow with zero emojis
+[34m|[m * [33m0af19cd[m refactor(ui): refine product, UX, and readability for SIH judges across all screens according to redine_ui.md
+[34m|[m[34m/[m  
+* [33ma6278f7[m[33m ([m[1;32mmain[m[33m)[m docs: add comprehensive README.md with architecture, features, and setup guide
+* [33m368926e[m feat: national unified material master with full light/dark theme support, xls/csv upload, and responsive ui

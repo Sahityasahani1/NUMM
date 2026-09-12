@@ -1,7 +1,8 @@
-﻿import uuid
+import uuid
 from datetime import datetime
 from sqlalchemy import Column, String, Text, DateTime
 from app.core.database import Base
+from app.models.common import get_utc_now
 
 class AuditEvent(Base):
     __tablename__ = "audit_event"
@@ -14,7 +15,7 @@ class AuditEvent(Base):
     rule_version = Column(String(50), nullable=True)
     model_version = Column(String(50), nullable=True)
     details = Column(Text, nullable=True)
-    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
+    timestamp = Column(DateTime, default=get_utc_now, nullable=False)
 
 class ReviewDecision(Base):
     __tablename__ = "review_decision"
@@ -27,4 +28,4 @@ class ReviewDecision(Base):
     reason = Column(Text, nullable=False)
     before_json = Column(Text, nullable=True)
     after_json = Column(Text, nullable=True)
-    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
+    timestamp = Column(DateTime, default=get_utc_now, nullable=False)

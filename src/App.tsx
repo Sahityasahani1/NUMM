@@ -19,8 +19,11 @@ import { RationalizationScreen } from './components/screens/RationalizationScree
 import { DataHubScreen } from './components/screens/DataHubScreen';
 import { AnalyticsScreen } from './components/screens/AnalyticsScreen';
 import { GovernanceScreen } from './components/screens/GovernanceScreen';
+import { ArbitrageScreen } from './components/screens/ArbitrageScreen';
+import { SemanticManifoldScreen } from './components/screens/SemanticManifoldScreen';
 import { SettingsScreen, SupportScreen } from './components/screens/SettingsScreen';
 import { GridPattern } from './components/core/grid-pattern';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 
 const MainApp: React.FC = () => {
   const { activeScreen, sidebarCollapsed } = useApp();
@@ -34,6 +37,8 @@ const MainApp: React.FC = () => {
       case 'master':       return <MasterCatalogueScreen />;
       case 'detail':       return <MaterialDetailScreen />;
       case 'rationalization': return <RationalizationScreen />;
+      case 'arbitrage':    return <ArbitrageScreen />;
+      case 'manifold':     return <SemanticManifoldScreen />;
       case 'datahub':      return <DataHubScreen />;
       case 'analytics':    return <AnalyticsScreen />;
       case 'governance':   return <GovernanceScreen />;
@@ -66,7 +71,9 @@ const MainApp: React.FC = () => {
 
         <TopAppBar />
         <div className="flex-1 flex flex-col overflow-hidden relative animate-fade-in z-10">
-          {renderScreen()}
+          <ErrorBoundary key={activeScreen} fallbackTitle={`Screen: ${activeScreen.toUpperCase()} view issue intercepted`}>
+            {renderScreen()}
+          </ErrorBoundary>
         </div>
       </div>
 
@@ -94,7 +101,9 @@ const MainLayout: React.FC = () => {
 export default function App() {
   return (
     <AppProvider>
-      <MainLayout />
+      <ErrorBoundary fallbackTitle="National Unified Material Master Root Anomaly">
+        <MainLayout />
+      </ErrorBoundary>
     </AppProvider>
   );
 }

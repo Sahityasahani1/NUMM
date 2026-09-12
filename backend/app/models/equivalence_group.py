@@ -1,9 +1,10 @@
-﻿import uuid
+import uuid
 from datetime import datetime
 from sqlalchemy import Column, String, Text, DateTime, Float, ForeignKey, Integer, Enum as SQLEnum
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 from app.models.enums import RelationshipType, GroupStatus
+from app.models.common import get_utc_now
 
 class EquivalenceGroup(Base):
     __tablename__ = "equivalence_group"
@@ -18,8 +19,8 @@ class EquivalenceGroup(Base):
     evidence_payload = Column(Text, nullable=True)
     status = Column(SQLEnum(GroupStatus), default=GroupStatus.PROPOSED, nullable=False)
     proposed_cnmc = Column(String(50), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_utc_now, nullable=False)
+    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now, nullable=False)
 
     canonical_material = relationship("CanonicalMaterial", back_populates="equivalence_groups")
     members = relationship("EquivalenceGroupMember", back_populates="equivalence_group", cascade="all, delete-orphan")
@@ -33,7 +34,7 @@ class EquivalenceGroupMember(Base):
     cpse_material_id = Column(String(36), ForeignKey("cpse_material.id"), nullable=False)
     is_anchor = Column(Integer, default=0, nullable=False)
     evidence_json = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_utc_now, nullable=False)
 
     equivalence_group = relationship("EquivalenceGroup", back_populates="members")
     cpse_material = relationship("CPSEMaterial", back_populates="group_memberships")

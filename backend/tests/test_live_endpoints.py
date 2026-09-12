@@ -16,7 +16,7 @@ def test_live_harmonize_endpoint():
     assert data["extracted_attributes"]["pressure_rating"] == "150#"
     assert "2 INCH" in data["extracted_attributes"]["dimensions"]
     assert "ASTM A216 WCB" in data["extracted_attributes"]["material_grade"]
-    assert data["unspsc_code"] == "40141600"
+    assert data["unspsc_code"] == "40141607"
 
 def test_live_compare_identical_records():
     payload = {

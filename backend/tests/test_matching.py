@@ -112,7 +112,53 @@ def test_grade_contradiction_blocking():
     assert any("CRITICAL CONFLICT in material_grade" in c for c in result["conflicts"])
 
 def test_attribute_extractor_hash_pressure_rating():
-    attrs = AttributeExtractor.extract_attributes("VLV BALL 2IN 150# CS")
+    attrs = AttributeExtractor.extract_attributes("VLV BL 2IN 150# CS")
     assert attrs["pressure_rating"] == "150#"
     assert "2 INCH" in attrs["dimensions"]
+
+def test_explainer_case_study_ongc_vs_iocl_safe_merge():
+    """
+    Direct verification of Case Study in Explainer PDF (Page 1 & 5):
+    ONGC: VLV BL 2IN 150# RF A105
+    IOCL: BALL VALVE 2" 150 LB WCB CS
+    Metallurgy: A105 == WCB (Compatible Carbon Steel) -> PASS
+    """
+    attr1 = AttributeExtractor.extract_attributes("VLV BL 2IN 150# RF A105")
+    attr2 = AttributeExtractor.extract_attributes("BALL VALVE 2\" 150 LB WCB CS")
+
+    assert attr1["unspsc_code"] == "40141607"
+    assert attr2["unspsc_code"] == "40141607"
+    assert attr1["pressure_rating"] == "150#"
+    assert attr2["pressure_rating"] == "150#"
+
+    rec1 = {
+        "cpse_id": "ONGC",
+        "source_description": "VLV BL 2IN 150# RF A105",
+        "source_uom": "EA",
+        "attributes": attr1
+    }
+    rec2 = {
+        "cpse_id": "IOCL",
+        "source_description": "BALL VALVE 2\" 150 LB WCB CS",
+        "source_uom": "EA",
+        "attributes": attr2
+    }
+
+    result = MatchingEngine.match_records(rec1, rec2)
+    assert result["has_critical_conflict"] is False
+    assert result["deterministic_safety_hazard"] is False
+    assert result["confidence_score"] >= 0.85
+    assert any("Compatible Metallurgy" in m or "material_grade" in m for m in result["matches"])
+
+def test_8_digit_unspsc_mapping():
+    ball_attrs = AttributeExtractor.extract_attributes("VALVE BALL 2IN 150# A105")
+    gate_attrs = AttributeExtractor.extract_attributes("VALVE GATE 4IN 300# WCB")
+    flange_attrs = AttributeExtractor.extract_attributes("FLANGE WELD NECK 3IN 150# A105")
+    pipe_attrs = AttributeExtractor.extract_attributes("SEAMLESS PIPE 6IN SCH 40 ASTM A106")
+
+    assert ball_attrs["unspsc_code"] == "40141607"
+    assert gate_attrs["unspsc_code"] == "40141604"
+    assert flange_attrs["unspsc_code"] == "40141753"
+    assert pipe_attrs["unspsc_code"] == "40142115"
+
 

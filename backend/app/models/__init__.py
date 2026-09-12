@@ -1,4 +1,4 @@
-﻿from app.models.enums import (
+from app.models.enums import (
     RelationshipType,
     CNMCLifecycleStatus,
     GroupStatus,
@@ -13,6 +13,7 @@ from app.models.equivalence_group import EquivalenceGroup, EquivalenceGroupMembe
 from app.models.mapping import CPSEMapping, MigrationRecord
 from app.models.audit import AuditEvent, ReviewDecision
 from app.models.procurement import ProcurementRecord
+from app.models.active_learning import TrainingTriplet
 
 __all__ = [
     "RelationshipType",
@@ -30,5 +31,6 @@ __all__ = [
     "MigrationRecord",
     "AuditEvent",
     "ReviewDecision",
-    "ProcurementRecord"
+    "ProcurementRecord",
+    "TrainingTriplet"
 ]

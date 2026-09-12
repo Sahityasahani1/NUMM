@@ -1,6 +1,5 @@
 import os
-from pathlib import Path
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "National Unified Material Master Platform"
@@ -23,18 +22,11 @@ class Settings(BaseSettings):
     MODEL_VERSION: str = "all-MiniLM-L6-v2-faiss-v2.0"
     
     # Vector Search & Semantic Embedding Configuration
-    EMBEDDING_MODEL_NAME: str = os.getenv(
-        "EMBEDDING_MODEL_NAME",
-        str(Path(__file__).resolve().parent.parent.parent / "models" / "custom-material-embedder")
-        if (Path(__file__).resolve().parent.parent.parent / "models" / "custom-material-embedder").exists()
-        else "all-MiniLM-L6-v2"
-    )
+    EMBEDDING_MODEL_NAME: str = "all-MiniLM-L6-v2"
     EMBEDDING_DIMENSION: int = 384
     FAISS_TOP_K_CANDIDATES: int = 10
     ENABLE_FAISS_KNN: bool = True
 
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
+    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True, extra="ignore")
 
 settings = Settings()

@@ -1,136 +1,136 @@
 import React from 'react';
-import { useApp, ScreenType } from '../../context/AppContext';
-
-const titles: Record<ScreenType, string> = {
-  landing: 'Welcome',
-  home: 'Problem & Architecture',
-  dashboard: 'Overview',
-  datahub: 'CPSE Data Hub',
-  harmonization: 'Harmonization Workbench',
-  master: 'National Material Master',
-  detail: 'Material Specification Sheet',
-  review: 'Review Queue',
-  rationalization: 'Rationalization & Merge',
-  analytics: 'Analytics & Savings',
-  governance: 'Audit Trail',
-  settings: 'Settings',
-  support: 'Documentation',
-};
+import { useApp } from '../../context/AppContext';
+import { AnimatedThemeToggle } from '@/components/ui/animated-theme-toggle';
 
 export const TopAppBar: React.FC = () => {
   const {
-    theme, toggleTheme,
-    activeScreen, setActiveScreen,
     globalSearch,
     setSearchOpen,
     openUploadModal,
     reviewQueue,
+    setActiveScreen,
   } = useApp();
 
   return (
     <header
-      className="flex items-center justify-between px-6 h-14 shrink-0 z-40"
       style={{
-        background: '#000000',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+        backgroundColor: 'var(--bg-surface)',
+        borderBottom: '1px solid var(--border)',
+        color: 'var(--text-primary)',
       }}
+      className="app-header flex items-center justify-between px-8 h-16 shrink-0 z-30"
     >
-      {/* Title + Date filter chip matching template */}
-      <div className="flex items-center gap-3">
-        <h1 className="text-xl font-bold text-white tracking-tight">
-          {titles[activeScreen] ?? 'Overview'}
-        </h1>
+      {/* Search Bar */}
+      <div className="flex-1 max-w-xl">
         <div
-          className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium select-none text-[#a1a1aa]"
-          style={{
-            background: 'rgba(255, 255, 255, 0.05)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-          }}
+          onClick={() => setSearchOpen(true)}
+          className="relative flex items-center cursor-pointer group"
         >
-          <span className="material-symbols-outlined text-[14px]">calendar_today</span>
-          Last 30 days
-        </div>
-      </div>
-
-      {/* Right controls matching template */}
-      <div className="flex items-center gap-3">
-        {/* Search bar matching template */}
-        <div className="relative">
           <span
-            className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[15px] pointer-events-none text-[#71717a]"
+            className="material-symbols-outlined absolute left-3.5 text-[18px] pointer-events-none transition-colors"
+            style={{ color: 'var(--text-muted)' }}
           >
             search
           </span>
           <input
             readOnly
             value={globalSearch}
-            onFocus={() => setSearchOpen(true)}
-            onClick={() => setSearchOpen(true)}
-            placeholder="Search..."
-            className="text-sm pl-9 pr-12 py-2 rounded-lg w-60 cursor-pointer text-white placeholder-[#71717a] outline-none transition-all"
+            placeholder="Search materials, CNMC codes, CPSEs..."
             style={{
-              background: '#0d0d10',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              backgroundColor: 'var(--bg-input)',
+              border: '1px solid var(--border)',
+              color: 'var(--text-primary)',
             }}
+            className="w-full pl-10 pr-10 py-2 text-xs md:text-sm rounded-lg outline-none transition-all cursor-pointer font-sans placeholder-[color:var(--text-muted)]"
           />
           <kbd
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] pointer-events-none rounded px-1.5 py-0.5 text-[#71717a] font-mono"
             style={{
-              background: 'rgba(255, 255, 255, 0.06)',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
+              backgroundColor: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              color: 'var(--text-muted)',
             }}
+            className="absolute right-3 px-1.5 py-0.5 rounded text-[11px] font-mono pointer-events-none"
           >
-            ⌘K
+            /
           </kbd>
         </div>
+      </div>
+
+      {/* Right Controls */}
+      <div className="flex items-center gap-3 ml-6">
+        {/* Download Project Documentation Button */}
+        <a
+          href="/NUMM_National_Unified_Material_Master_Documentation.docx"
+          download="NUMM_National_Unified_Material_Master_Documentation.docx"
+          title="Download Complete Project Documentation (.docx)"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shadow-sm bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 cursor-pointer group"
+        >
+          <span className="material-symbols-outlined text-[16px] text-emerald-400 group-hover:translate-y-0.5 transition-transform">
+            download
+          </span>
+          <span className="font-mono text-[11px] font-bold">Download Docs (.docx)</span>
+        </a>
 
         {/* Upload Dataset Button */}
         <button
           onClick={() => openUploadModal('ONGC')}
-          className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold hover:brightness-110 transition-all text-white shadow-sm"
           style={{
-            background: 'rgba(255, 255, 255, 0.1)',
-            border: '1px solid rgba(255, 255, 255, 0.12)',
+            backgroundColor: 'var(--bg-card)',
+            border: '1px solid var(--border)',
+            color: 'var(--text-primary)',
           }}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shadow-sm hover:opacity-80"
         >
-          <span className="material-symbols-outlined text-[15px]">upload_file</span>
-          Upload
-        </button>
-
-        {/* Theme toggle */}
-        <button
-          onClick={toggleTheme}
-          className="p-1.5 rounded-lg hover:bg-white/5 transition-colors text-[#a1a1aa] hover:text-white"
-          title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
-        >
-          <span className="material-symbols-outlined text-[18px]">
-            {theme === 'dark' ? 'light_mode' : 'dark_mode'}
+          <span
+            className="material-symbols-outlined text-[16px]"
+            style={{ color: 'var(--text-muted)' }}
+          >
+            upload
           </span>
+          <span>Upload</span>
         </button>
 
-        {/* Bell Notifications matching template */}
+        {/* Notifications */}
         <button
           onClick={() => setActiveScreen('review')}
-          className="relative p-1.5 rounded-lg hover:bg-white/5 transition-colors text-[#a1a1aa] hover:text-white"
+          style={{ color: 'var(--text-secondary)' }}
+          className="relative p-2 rounded-lg transition-colors hover:opacity-80"
           title="Review Queue"
         >
-          <span className="material-symbols-outlined text-[18px]">notifications</span>
+          <span className="material-symbols-outlined text-[20px]">notifications</span>
           {reviewQueue.length > 0 && (
             <span
-              className="absolute top-1 right-1 w-2 h-2 rounded-full"
-              style={{ background: '#10b981' }}
+              className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#10B981]"
+              style={{ boxShadow: '0 0 0 2px var(--bg-surface)' }}
             />
           )}
         </button>
 
-        {/* Square Avatar matching template */}
+        {/* Animated Dark / Light Theme Toggle */}
+        <AnimatedThemeToggle className="h-8 w-8 p-0 shrink-0" />
+
+        {/* User Profile Badge */}
         <div
           onClick={() => setActiveScreen('settings')}
-          className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold cursor-pointer hover:opacity-90 transition-opacity shadow-sm"
-          style={{ background: '#8b5cf6', color: '#ffffff' }}
-          title="Admin Steward"
+          className="flex items-center gap-3 pl-2 py-1 cursor-pointer group select-none"
         >
-          JD
+          <div className="w-8 h-8 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-xs font-bold font-sans shadow-sm shrink-0">
+            KS
+          </div>
+          <div className="hidden sm:flex flex-col text-left">
+            <span
+              className="text-xs font-semibold leading-tight transition-colors"
+              style={{ color: 'var(--text-primary)' }}
+            >
+              Krishna Somani
+            </span>
+            <span
+              className="text-[11px] font-medium leading-tight"
+              style={{ color: 'var(--text-secondary)' }}
+            >
+              CPSE User
+            </span>
+          </div>
         </div>
       </div>
     </header>

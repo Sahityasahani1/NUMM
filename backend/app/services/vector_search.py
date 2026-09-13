@@ -96,7 +96,9 @@ class BM25Okapi:
 class VectorSearchService:
     _instance: Optional["VectorSearchService"] = None
     _lock: threading.Lock = threading.Lock()
-    DEFAULT_STORAGE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "vector_index"))
+    DEFAULT_STORAGE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "aiml", "data", "vector_index"))
+    if not os.path.exists(DEFAULT_STORAGE_DIR):
+        DEFAULT_STORAGE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "vector_index"))
 
     def __init__(self):
         self.model_name = settings.EMBEDDING_MODEL_NAME

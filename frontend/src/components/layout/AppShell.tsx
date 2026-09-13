@@ -76,11 +76,17 @@ export const AppShell: React.FC = () => {
   const isActive = (id: ScreenType) => activeScreen === id;
   const width = sidebarCollapsed ? 'w-16' : 'w-64';
 
+  // Expose global navigation for automation and testing
+  if (typeof window !== 'undefined') {
+    (window as any).nummNavigate = setActiveScreen;
+  }
+
   const renderNavButton = (item: NavItem) => {
     const active = isActive(item.id);
     return (
       <button
         key={item.id}
+        data-screen={item.id}
         onClick={() => setActiveScreen(item.id)}
         title={sidebarCollapsed ? item.label : undefined}
         style={

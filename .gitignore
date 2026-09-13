@@ -52,3 +52,7 @@ desktop.ini
 
 # Logs
 *.log
+
+# Video recordings (keep screenshots and markdown tracked, exclude heavy raw video from git)
+linkedin_showcase/video/
+

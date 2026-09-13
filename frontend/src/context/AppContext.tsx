@@ -213,8 +213,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [sidebarOpenGroups, setSidebarOpenGroups] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('sidebar-open-groups');
-      return saved ? JSON.parse(saved) : ['overview', 'catalog'];
-    } catch { return ['overview', 'catalog']; }
+      return saved ? JSON.parse(saved) : ['overview', 'catalog', 'review-ops', 'analytics-group', 'admin'];
+    } catch { return ['overview', 'catalog', 'review-ops', 'analytics-group', 'admin']; }
   });
   const setSidebarCollapsed = (v: boolean) => {
     setSidebarCollapsedState(v);

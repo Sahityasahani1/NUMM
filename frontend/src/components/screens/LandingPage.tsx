@@ -192,6 +192,9 @@ const CpseCard: React.FC<{
 ───────────────────────────────────────────────────────────── */
 export const LandingPage: React.FC = () => {
   const { setActiveScreen } = useApp();
+  if (typeof window !== 'undefined') {
+    (window as any).nummNavigate = setActiveScreen;
+  }
   const [activeTab, setActiveTab] = useState<SandboxKey>('valve');
   const [activeSection, setActiveSection] = useState<string>('hero');
 

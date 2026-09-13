@@ -1,0 +1,450 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* =======================================================================
+   CHARCOAL + TEAL/GREEN INDUSTRIAL DESIGN SYSTEM
+   Government + Industrial + Trustworthy
+   ======================================================================= */
+
+:root, html.dark {
+  color-scheme: dark;
+  /* Complete Black Canvas & Shade-Above-Black Panels */
+  --bg:              #000000;
+  --bg-surface:      #0C0E0D;
+  --bg-card:         #0C0E0D;
+  --bg-sidebar:      #000000;
+  --bg-hover:        rgba(255, 255, 255, 0.04);
+  --bg-active:       rgba(16, 185, 129, 0.12);
+  --bg-input:        #070908;
+
+  /* Industrial Borders */
+  --border:          #232825;
+  --border-subtle:   rgba(255, 255, 255, 0.06);
+  --border-active:   #10B981;
+
+  /* High-Contrast Typography */
+  --text-primary:    #F3F4F6;
+  --text-secondary:  #9CA3AF;
+  --text-muted:      #6B7280;
+
+  /* Primary Accent: Emerald / Teal Green */
+  --primary:         #10B981;
+  --primary-hover:   #059669;
+  --primary-dim:     rgba(16, 185, 129, 0.12);
+
+  /* Semantic Status Indicators */
+  --success:         #10B981;
+  --success-dim:     rgba(16, 185, 129, 0.12);
+  --warning:         #EAB308;
+  --warning-dim:     rgba(234, 179, 8, 0.12);
+  --error:           #EF4444;
+  --error-dim:       rgba(239, 68, 68, 0.12);
+  --info:            #3B82F6;
+  --info-dim:        rgba(59, 130, 246, 0.12);
+
+  /* Palette compatibility mappings */
+  --blue:            #10B981;
+  --blue-dim:        rgba(16, 185, 129, 0.12);
+  --indigo:          #3B82F6;
+  --indigo-dim:      rgba(59, 130, 246, 0.12);
+  --cyan:            #22D3EE;
+  --cyan-dim:        rgba(34, 211, 238, 0.14);
+  --emerald:         #10B981;
+  --emerald-dim:     rgba(16, 185, 129, 0.12);
+  --violet:          #10B981;
+  --violet-hover:    #059669;
+  --violet-dim:      rgba(16, 185, 129, 0.12);
+  --purple:          #3B82F6;
+  --purple-dim:      rgba(59, 130, 246, 0.12);
+  --lavender:        #A7ADA9;
+
+  --shadow-card:     0 1px 3px rgba(0,0,0,0.6);
+  --shadow-elevated: 0 10px 30px -10px rgba(0,0,0,0.8);
+}
+
+/* =======================================================================
+   CLEAN GOVERNMENT LIGHT DESIGN SYSTEM
+   Authoritative + Clean + High-Contrast
+   ======================================================================= */
+html.light {
+  color-scheme: light;
+
+  /* Warm neutral page — surfaces lift naturally without harsh contrast */
+  --bg:              #F3F4F6;
+  --bg-surface:      #FFFFFF;
+  --bg-card:         #FFFFFF;
+  --bg-sidebar:      #FAFAFA;
+  --bg-hover:        #F3F4F6;
+  --bg-active:       #ECFDF5;
+  --bg-input:        #FFFFFF;
+
+  /* Subtle but readable borders */
+  --border:          #E5E7EB;
+  --border-subtle:   #F3F4F6;
+  --border-active:   #059669;
+
+  /* Rich, high-contrast text hierarchy */
+  --text-primary:    #111827;
+  --text-secondary:  #4B5563;
+  --text-muted:      #9CA3AF;
+
+  --primary:         #059669;
+  --primary-hover:   #047857;
+  --primary-dim:     rgba(5, 150, 105, 0.10);
+
+  --success:         #059669;
+  --success-dim:     rgba(5, 150, 105, 0.10);
+  --warning:         #D97706;
+  --warning-dim:     rgba(217, 119, 6, 0.10);
+  --error:           #DC2626;
+  --error-dim:       rgba(220, 38, 38, 0.10);
+  --info:            #2563EB;
+  --info-dim:        rgba(37, 99, 235, 0.10);
+
+  --blue:            #059669;
+  --blue-dim:        rgba(5, 150, 105, 0.10);
+  --indigo:          #3B82F6;
+  --indigo-dim:      rgba(59, 130, 246, 0.10);
+  --cyan:            #0891B2;
+  --cyan-dim:        rgba(8, 145, 178, 0.10);
+  --emerald:         #059669;
+  --emerald-dim:     rgba(5, 150, 105, 0.10);
+  --violet:          #059669;
+  --violet-hover:    #047857;
+  --violet-dim:      rgba(5, 150, 105, 0.10);
+  --purple:          #3B82F6;
+  --purple-dim:      rgba(59, 130, 246, 0.10);
+  --lavender:        #6B7280;
+
+  /* Premium shadows — depth without harshness */
+  --shadow-card:     0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-elevated: 0 8px 24px rgba(0, 0, 0, 0.10), 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+
+/* ---------- BASE TYPOGRAPHY (SCALED FOR PERFECT LEGIBILITY) ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  height: 100%;
+  background: var(--bg);
+}
+
+/* Material symbols adjustments */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+  vertical-align: middle;
+  line-height: 1;
+}
+.material-symbols-outlined.icon-fill {
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.22); }
+
+/* Monospace font */
+.mono { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+
+/* Card hover */
+.card-hover {
+  transition: border-color 150ms ease, transform 150ms ease, box-shadow 150ms ease;
+}
+.card-hover:hover {
+  border-color: rgba(255, 255, 255, 0.16) !important;
+}
+
+/* Accordion max-height transition */
+.accordion-content {
+  overflow: hidden;
+  transition: max-height 200ms ease, opacity 200ms ease;
+}
+.accordion-content.open {
+  max-height: 400px;
+  opacity: 1;
+}
+.accordion-content.closed {
+  max-height: 0;
+  opacity: 0;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fadeIn 200ms ease-out forwards;
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+.animate-slide-in-right {
+  animation: slideInRight 220ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Text Shimmer Animation */
+@keyframes textShimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* =======================================================================
+   LIGHT THEME OVERRIDES (Targeting all pages, components, & utility classes)
+   ======================================================================= */
+
+html.light body,
+html.light #root,
+html.light main,
+html.light [class*="bg-[#000000]"],
+html.light [class*="bg-[#070908]"],
+html.light .bg-\[\#000000\],
+html.light .bg-\[\#070908\] {
+  background-color: var(--bg) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Chrome surfaces: Sidebar & Top App Bar */
+html.light aside,
+html.light aside[class*="bg-"],
+html.light header.app-header,
+html.light header:not(.landing-header)[class*="bg-"] {
+  background-color: #FFFFFF !important;
+  border-color: #E5E7EB !important;
+}
+
+/* Subtle shadows for depth — no jarring bg color differences */
+html.light header:not(.landing-header) {
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08) !important;
+}
+html.light aside {
+  box-shadow: 1px 0 6px rgba(0, 0, 0, 0.06) !important;
+}
+
+html.light aside div,
+html.light aside nav,
+html.light aside section,
+html.light header div {
+  border-color: #E2E8F0 !important;
+}
+
+/* Cards, Panels and Tables */
+html.light [class*="bg-[#0C0E0D]"],
+html.light [class*="bg-[#161B18]"],
+html.light [class*="bg-[#101412]"],
+html.light [class*="bg-[#131715]"],
+html.light .bg-\[\#0C0E0D\],
+html.light .bg-\[\#161B18\],
+html.light .bg-\[\#101412\],
+html.light .bg-\[\#131715\] {
+  background-color: #FFFFFF !important;
+  border-color: #E2E8F0 !important;
+}
+
+/* Hover surfaces in light mode */
+html.light [class*="hover:bg-white/5"]:hover,
+html.light [class*="hover:bg-white/[0.04]"]:hover,
+html.light [class*="hover:bg-[#131715]"]:hover,
+html.light [class*="hover:bg-[#161B18]"]:hover {
+  background-color: #F1F5F9 !important;
+}
+
+/* Text Hierarchy Overrides */
+html.light .text-white:not([class*="bg-[#10B981]"]):not([class*="bg-[#2563EB]"]):not([class*="bg-emerald"]):not([class*="bg-blue"]):not([class*="bg-red"]):not([class*="bg-amber"]),
+html.light [class*="text-[#F3F4F6]"]:not([class*="bg-[#10B981]"]):not([class*="bg-[#2563EB]"]),
+html.light [class*="text-[#E5E7EB]"]:not([class*="bg-[#10B981]"]),
+html.light .text-\[\#F3F4F6\],
+html.light .text-\[\#E5E7EB\] {
+  color: #0F172A !important;
+}
+
+html.light [class*="text-[#9CA3AF]"],
+html.light [class*="text-[#A7ADA9]"],
+html.light [class*="text-[#a1a1aa]"],
+html.light [class*="text-[#71717a]"],
+html.light .text-\[\#9CA3AF\],
+html.light .text-\[\#A7ADA9\],
+html.light .text-\[\#a1a1aa\],
+html.light .text-\[\#71717a\] {
+  color: #475569 !important;
+}
+
+html.light [class*="text-[#6B7280]"],
+html.light .text-\[\#6B7280\] {
+  color: #64748B !important;
+}
+
+/* Borders */
+html.light [class*="border-[#232825]"],
+html.light [class*="border-[#1B201D]"],
+html.light [class*="border-[#2A332E]"],
+html.light [class*="border-[#38423C]"],
+html.light [class*="border-[#151917]"],
+html.light .border-\[\#232825\],
+html.light .border-\[\#1B201D\],
+html.light .border-\[\#2A332E\],
+html.light .border-\[\#38423C\],
+html.light .border-\[\#151917\] {
+  border-color: #E5E7EB !important;
+}
+
+html.light [class*="hover:border-[#38423C]"]:hover {
+  border-color: #D1D5DB !important;
+}
+
+/* Form inputs, selects & kbd */
+html.light input,
+html.light select,
+html.light textarea {
+  background-color: #FFFFFF !important;
+  border-color: #CBD5E1 !important;
+  color: #0F172A !important;
+}
+
+html.light input::placeholder,
+html.light textarea::placeholder {
+  color: #94A3B8 !important;
+}
+
+html.light select option {
+  background-color: #FFFFFF !important;
+  color: #0F172A !important;
+}
+
+html.light kbd {
+  background-color: #F1F5F9 !important;
+  border-color: #E2E8F0 !important;
+  color: #64748B !important;
+}
+
+/* Active navigation item in sidebar */
+html.light aside button[class*="bg-[#10B981]/10"],
+html.light button[class*="bg-[#10B981]/10"] {
+  background-color: #ECFDF5 !important;
+  border-color: #A7F3D0 !important;
+  color: #047857 !important;
+}
+
+html.light aside button[class*="bg-[#10B981]/10"] span,
+html.light button[class*="bg-[#10B981]/10"] span {
+  color: #047857 !important;
+}
+
+/* Inactive nav buttons in sidebar */
+html.light aside button:not([class*="bg-[#10B981]/10"]) {
+  color: #475569 !important;
+}
+
+html.light aside button:not([class*="bg-[#10B981]/10"]):hover {
+  background-color: #F1F5F9 !important;
+  color: #0F172A !important;
+}
+
+/* Ashoka Lion / Logo in sidebar */
+html.light aside svg {
+  color: #0F172A !important;
+  fill: currentColor !important;
+}
+
+/* Badges with dark backgrounds in sidebar */
+html.light aside span[class*="bg-[#161B18]"] {
+  background-color: #F1F5F9 !important;
+  border-color: #E2E8F0 !important;
+  color: #475569 !important;
+}
+
+/* Solid colored buttons */
+html.light button[class*="bg-[#10B981]"],
+html.light .bg-\[\#10B981\],
+html.light .bg-emerald-600,
+html.light .bg-emerald-500 {
+  background-color: #059669 !important;
+  color: #FFFFFF !important;
+}
+html.light button[class*="bg-[#10B981]"] *,
+html.light .bg-\[\#10B981\] * {
+  color: #FFFFFF !important;
+}
+
+/* Neutral buttons (Upload, filters, secondary actions) */
+html.light button[class*="bg-[#0C0E0D]"],
+html.light button[class*="bg-[#070908]"] {
+  background-color: #FFFFFF !important;
+  border-color: #E2E8F0 !important;
+  color: #0F172A !important;
+}
+html.light button[class*="bg-[#0C0E0D]"]:hover,
+html.light button[class*="bg-[#070908]"]:hover {
+  background-color: #F8FAFC !important;
+  border-color: #CBD5E1 !important;
+}
+
+/* Tables in light mode */
+html.light table th {
+  background-color: #F8FAFC !important;
+  color: #475569 !important;
+  border-color: #E2E8F0 !important;
+}
+html.light table td {
+  border-color: #E2E8F0 !important;
+}
+html.light table tbody tr:hover {
+  background-color: #F8FAFC !important;
+}
+
+/* Modals, popovers, and search spotlight */
+html.light [role="dialog"],
+html.light .modal-surface {
+  background-color: #FFFFFF !important;
+  border-color: #E2E8F0 !important;
+  color: #0F172A !important;
+}
+
+/* Override inline styles for legacy components */
+html.light [style*="background: rgb(12, 14, 13)"],
+html.light [style*="background: #0C0E0D"],
+html.light [style*="background:#0C0E0D"],
+html.light [style*="background: #070908"],
+html.light [style*="background:#070908"] {
+  background: #FFFFFF !important;
+  border-color: #E2E8F0 !important;
+}
+
+html.light [style*="border: 1px solid #232825"],
+html.light [style*="border:1px solid #232825"],
+html.light [style*="border-color: #232825"] {
+  border-color: #E2E8F0 !important;
+}
+
+/* Scrollbar in light mode */
+html.light ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.16);
+}
+html.light ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.28);
+}
+
+/* Card hover in light mode */
+html.light .card-hover:hover {
+  border-color: #CBD5E1 !important;
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.08);
+}

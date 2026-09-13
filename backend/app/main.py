@@ -59,9 +59,13 @@ def health_check():
 
 @app.get("/api/download/documentation", tags=["Documentation"])
 def download_documentation():
-    docx_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "public", "NUMM_National_Unified_Material_Master_Documentation.docx"))
-    if not os.path.exists(docx_path):
-        docx_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "docs", "NUMM_National_Unified_Material_Master_Documentation.docx"))
+    candidates = [
+        os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "words", "NUMM_National_Unified_Material_Master_Documentation.docx")),
+        os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "public", "NUMM_National_Unified_Material_Master_Documentation.docx")),
+        os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "public", "NUMM_National_Unified_Material_Master_Documentation.docx")),
+        os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "docs", "NUMM_National_Unified_Material_Master_Documentation.docx")),
+    ]
+    docx_path = next((p for p in candidates if os.path.exists(p)), candidates[0])
     return FileResponse(
         docx_path,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -86,8 +90,10 @@ async def global_exception_handler(request: Request, exc: Exception):
         }
     )
 
-# Static file serving: Check for production build in dist/
-dist_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "dist"))
+# Static file serving: Check frontend/dist/ first, then dist/
+dist_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist"))
+if not os.path.exists(dist_dir):
+    dist_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "dist"))
 assets_dir = os.path.join(dist_dir, "assets")
 if os.path.exists(assets_dir):
     app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")

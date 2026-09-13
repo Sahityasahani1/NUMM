@@ -1,6 +1,6 @@
 @echo off
 title NUMM Frontend Server (Vite :3000)
-cd /d "%~dp0"
+cd /d "%~dp0frontend"
 if exist "C:\Program Files\nodejs" (
     set "PATH=C:\Program Files\nodejs;%PATH%"
 )

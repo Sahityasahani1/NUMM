@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>National Unified Material Master Platform | Ministry of Petroleum & Natural Gas</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="emblem-badge">🇮🇳</div>
+        <div class="header-titles">
+          <h2>MoPNG NUMM</h2>
+          <span class="subtitle">One Nation · One Material Code</span>
+        </div>
+      </div>
+      
+      <nav class="nav-menu">
+        <button class="nav-item active" data-tab="dashboard">
+          <span class="nav-icon">📊</span> Analytics & KPIs
+        </button>
+        <button class="nav-item" data-tab="how-it-works">
+          <span class="nav-icon">💡</span> How It Works & Architecture
+        </button>
+        <button class="nav-item" data-tab="ingestion">
+          <span class="nav-icon">📥</span> Catalog Ingestion
+        </button>
+        <button class="nav-item" data-tab="workbench">
+          <span class="nav-icon">⚡</span> AI Equivalence Workbench
+        </button>
+        <button class="nav-item" data-tab="canonical">
+          <span class="nav-icon">🏛️</span> National CNMC Registry
+        </button>
+        <button class="nav-item" data-tab="audit">
+          <span class="nav-icon">🛡️</span> Governance & Audit Trail
+        </button>
+        <button class="nav-item" data-tab="erp">
+          <span class="nav-icon">🔄</span> SAP / ERP Migration Export
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="system-status">
+          <span class="pulse-dot"></span>
+          <span>all-MiniLM-L6-v2 · FAISS IP</span>
+        </div>
+        <div class="build-badge">Index: <span id="sidebar-vector-count">0</span> vectors | v2.0</div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Top Bar -->
+      <header class="topbar">
+        <div class="breadcrumb">
+          <span id="current-section-title">Dashboard</span>
+          <span class="badge badge-outline">Production Governance</span>
+          <span class="badge badge-success" id="vector-status-badge">⚡ FAISS KNN Semantic Search Active</span>
+        </div>
+        <div class="topbar-actions">
+          <div class="actor-select-wrapper">
+            <label for="actor-role">Role:</label>
+            <select id="actor-role" class="select-input">
+              <option value="NATIONAL_MASTER_STEWARD">National Master Steward</option>
+              <option value="CPSE_DATA_STEWARD">CPSE Data Steward</option>
+              <option value="ERP_ADMINISTRATOR">ERP / SAP Admin</option>
+              <option value="GOVERNANCE_AUDITOR">Auditor (Read-Only)</option>
+            </select>
+          </div>
+          <button id="refresh-btn" class="btn btn-secondary" title="Refresh Data">🔄 Refresh</button>
+        </div>
+      </header>
+
+      <!-- Toast Container -->
+      <div id="toast-container" class="toast-container"></div>
+
+      <!-- Tab 1: Dashboard -->
+      <section id="tab-dashboard" class="tab-pane active">
+        <div class="section-intro">
+          <h2>National Material Master Overview</h2>
+          <p>Consolidated intelligence across CPSEs with deduplication metrics, procurement synergy, and legacy rationalization progress.</p>
+        </div>
+
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">Total CPSEs Enrolled</div>
+            <div class="kpi-value" id="kpi-cpse-count">0</div>
+            <div class="kpi-sub">ONGC, IOCL, GAIL & partners</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Total CPSE Material Records</div>
+            <div class="kpi-value" id="kpi-source-records">0</div>
+            <div class="kpi-sub">Source records preserved immutably</div>
+          </div>
+          <div class="kpi-card highlight">
+            <div class="kpi-label">Canonical Materials (CNMCs)</div>
+            <div class="kpi-value" id="kpi-cnmc-count">0</div>
+            <div class="kpi-sub">Unique national unified codes</div>
+          </div>
+          <div class="kpi-card success">
+            <div class="kpi-label">Deduplication Ratio</div>
+            <div class="kpi-value" id="kpi-dedup-ratio">0.0%</div>
+            <div class="kpi-sub">Legacy redundancy consolidated</div>
+          </div>
+          <div class="kpi-card success">
+            <div class="kpi-label">Est. Bulk Procurement Synergy</div>
+            <div class="kpi-value" id="kpi-synergy-savings">₹0 Cr</div>
+            <div class="kpi-sub">Aggregated inter-CPSE volume saving</div>
+          </div>
+          <div class="kpi-card warning">
+            <div class="kpi-label">Pending Reviews</div>
+            <div class="kpi-value" id="kpi-pending-reviews">0</div>
+            <div class="kpi-sub">Equivalence proposals awaiting steward</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Approved Mappings</div>
+            <div class="kpi-value" id="kpi-approved-mappings">0</div>
+            <div class="kpi-sub">Ready for ERP synchronization</div>
+          </div>
+        </div>
+
+        <!-- AI Confidence Distribution Card -->
+        <div class="card mb-4">
+          <div class="card-header flex-between">
+            <h3>AI Match Confidence & Governance Trust Distribution</h3>
+            <span class="badge badge-outline">Local Vector + Attribute Verification</span>
+          </div>
+          <div class="card-body">
+            <div class="confidence-bands-grid">
+              <div class="band-card high">
+                <div class="band-icon">🟢</div>
+                <div class="band-info">
+                  <div class="band-title">High Confidence (&ge; 85%)</div>
+                  <div class="band-desc">Complete attribute & semantic match. Safe for fast-track steward sign-off.</div>
+                </div>
+                <div class="band-count" id="band-high-count">0 groups</div>
+              </div>
+              <div class="band-card medium">
+                <div class="band-icon">🟡</div>
+                <div class="band-info">
+                  <div class="band-title">Medium Confidence (65% - 85%)</div>
+                  <div class="band-desc">Candidate interchangeables or partial attribute matches requiring steward review.</div>
+                </div>
+                <div class="band-count" id="band-medium-count">0 groups</div>
+              </div>
+              <div class="band-card low">
+                <div class="band-icon">🔴</div>
+                <div class="band-info">
+                  <div class="band-title">Low Confidence (&lt; 65%)</div>
+                  <div class="band-desc">Divergent items or candidates flagged by physics contradiction safety blocker.</div>
+                </div>
+                <div class="band-count" id="band-low-count">0 groups</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dashboard-grid">
+          <div class="card">
+            <div class="card-header">
+              <h3>CPSE Catalog Coverage</h3>
+            </div>
+            <div class="card-body">
+              <div id="cpse-distribution-list" class="progress-list">
+                <p class="empty-state">No CPSE catalogs imported yet.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3>Rationalization Action Breakdown</h3>
+            </div>
+            <div class="card-body">
+              <div id="actions-breakdown-list" class="progress-list">
+                <p class="empty-state">No rationalization decisions recorded yet.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab: How It Works & AI Architecture -->
+      <section id="tab-how-it-works" class="tab-pane">
+        <div class="section-intro">
+          <h2>How It Works: AI-Assisted, Human-Governed Material Master Management</h2>
+          <p>The Ministry of Petroleum & Natural Gas unified material platform harmonizes 70 years of divergent CPSE legacy catalogs into Common National Material Codes (CNMCs). Built strictly on the principle: <em>"AI Recommends, Authorized Human Governance Approves."</em></p>
+        </div>
+
+        <!-- 6-Stage End-to-End Pipeline Visualization -->
+        <div class="card mb-4">
+          <div class="card-header flex-between">
+            <h3>Unified Architecture Pipeline</h3>
+            <span class="badge badge-success">100% Offline &amp; Air-Gapped Capable</span>
+          </div>
+          <div class="card-body">
+            <div class="pipeline-flow-grid">
+              <div class="flow-step-card">
+                <div class="step-num">01</div>
+                <div class="step-icon">📥</div>
+                <h4>Immutable Ingestion</h4>
+                <p>Raw CPSE CSV/Excel catalogs are validated and stored byte-for-byte. Original descriptions, local codes, and CPSE IDs are never overwritten.</p>
+                <div class="step-tag">SHA-256 Verified</div>
+              </div>
+              <div class="flow-step-card">
+                <div class="step-num">02</div>
+                <div class="step-icon">🧹</div>
+                <h4>Domain Normalization</h4>
+                <p>Expands 40+ acronyms (VLV &rarr; VALVE, CS &rarr; CARBON STEEL), standardizes imperial/metric dimensions, and harmonizes UOMs into ISO units.</p>
+                <div class="step-tag">Deterministic Lexical</div>
+              </div>
+              <div class="flow-step-card">
+                <div class="step-num">03</div>
+                <div class="step-icon">⚡</div>
+                <h4>Dense Vector Retrieval</h4>
+                <p>Generates 384-dim dense embeddings using <code>all-MiniLM-L6-v2</code>. FAISS <code>IndexFlatIP</code> retrieves semantic neighbor candidates in &lt;5ms.</p>
+                <div class="step-tag">FAISS Cosine Similarity</div>
+              </div>
+              <div class="flow-step-card">
+                <div class="step-num">04</div>
+                <div class="step-icon">🛡️</div>
+                <h4>Contradiction Blocker</h4>
+                <p>Physics-based rule validator. Blocks consolidation if pressure ratings (150# vs 600#) or incompatible alloy grades (CS vs SS316) contradict.</p>
+                <div class="step-tag">Zero-Rupture Safety Rule</div>
+              </div>
+              <div class="flow-step-card">
+                <div class="step-num">05</div>
+                <div class="step-icon">⚖️</div>
+                <h4>Human-in-the-Loop</h4>
+                <p>National and CPSE Stewards review AI equivalence proposals in the workbench. Mandatory justification rationale is required for every decision.</p>
+                <div class="step-tag">Governed Authority</div>
+              </div>
+              <div class="flow-step-card">
+                <div class="step-num">06</div>
+                <div class="step-icon">🔄</div>
+                <h4>CNMC &amp; SAP Sync</h4>
+                <p>Generates sequential collision-safe CNMCs (e.g. CNMC-VAL-2026-00001) and generates SAP-ready RFC migration files with full cross-reference maps.</p>
+                <div class="step-tag">SAP MM-01 Interop</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Interactive Sandbox 1: Live Attribute Extraction -->
+        <div class="card mb-4">
+          <div class="card-header flex-between">
+            <div>
+              <h3>Interactive Sandbox 1: Real-Time Attribute Extraction &amp; UNSPSC Classification</h3>
+              <p class="card-subtitle">Test how raw industrial text strings are parsed into standardized engineering attributes and UNSPSC commodity classes.</p>
+            </div>
+            <span class="badge badge-outline">Live Endpoint</span>
+          </div>
+          <div class="card-body">
+            <div class="sandbox-presets mb-3">
+              <span class="preset-label">Load Industry Presets:</span>
+              <button class="btn btn-sm btn-outline preset-btn" data-input="VLV BALL 2IN 150# ASTM A216 WCB RF">Preset 1: Ball Valve (Abbreviated)</button>
+              <button class="btn btn-sm btn-outline preset-btn" data-input="FLG WN 4IN 600# A105 SCH 40 ASME B16.5">Preset 2: Weld Neck Flange</button>
+              <button class="btn btn-sm btn-outline preset-btn" data-input="GSKT SPWD 3IN 150# SS316 ASME B16.20">Preset 3: Spiral Wound Gasket</button>
+              <button class="btn btn-sm btn-outline preset-btn" data-input="SEAMLESS PIPE 6IN SCH 80 ASTM A106 GR B">Preset 4: Carbon Steel Pipe</button>
+            </div>
+            <div class="sandbox-input-row">
+              <input type="text" id="live-extract-input" class="search-input" placeholder="Type or paste any CPSE material description (e.g., VLV BALL 2IN 150# ASTM A216 WCB)..." value="VLV BALL 2IN 150# ASTM A216 WCB RF">
+              <button id="live-extract-btn" class="btn btn-primary">🔍 Extract &amp; Harmonize</button>
+            </div>
+
+            <!-- Live Output Area -->
+            <div id="live-extract-output" class="sandbox-output-box mt-3" style="display: none;">
+              <div class="output-grid">
+                <div class="output-col">
+                  <h4>Extracted Engineering Attributes</h4>
+                  <div class="attribute-pill-container" id="live-attrs-container"></div>
+                  <div class="mt-3">
+                    <label class="text-muted">Normalized Description:</label>
+                    <div class="code-box" id="live-norm-desc">-</div>
+                  </div>
+                  <div class="mt-2">
+                    <label class="text-muted">MoPNG Canonical Standard Format:</label>
+                    <div class="code-box highlight" id="live-canonical-desc">-</div>
+                  </div>
+                </div>
+                <div class="output-col">
+                  <h4>UNSPSC Taxonomy Classification</h4>
+                  <div class="taxonomy-card">
+                    <div class="taxonomy-segment" id="live-tax-segment">-</div>
+                    <div class="taxonomy-family" id="live-tax-family">-</div>
+                    <div class="taxonomy-class" id="live-tax-class">-</div>
+                    <div class="taxonomy-code">UNSPSC Code: <strong id="live-tax-code">-</strong></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Interactive Sandbox 2: Semantic Matching & Physics-Based Contradiction Blocker -->
+        <div class="card mb-4">
+          <div class="card-header flex-between">
+            <div>
+              <h3>Interactive Sandbox 2: Multi-Signal Matching &amp; Physics Contradiction Blocker</h3>
+              <p class="card-subtitle">Observe how semantic embeddings interact with deterministic physical safety rules. Contradictions in pressure rating, alloy grade, or dimensions immediately penalize and block consolidation.</p>
+            </div>
+            <span class="badge badge-outline">Live Matcher</span>
+          </div>
+          <div class="card-body">
+            <div class="sandbox-presets mb-3">
+              <span class="preset-label">Test Real-World Scenarios:</span>
+              <button class="btn btn-sm btn-outline compare-preset-btn" data-desc1="VLV BL 2IN 150# RF A105" data-desc2="BALL VALVE 2&quot; 150 LB WCB CS" data-uom1="EA" data-uom2="EA">Preset 1: ONGC vs IOCL Ball Valve (Case Study)</button>
+              <button class="btn btn-sm btn-outline compare-preset-btn" data-desc1="BALL VALVE 2IN 150# CS WCB" data-desc2="2 INCH 150 LB WCB BALL VALVE" data-uom1="EA" data-uom2="EA">Scenario A: Identical Paraphrases (Safe Merge)</button>
+              <button class="btn btn-sm btn-outline compare-preset-btn" data-desc1="GATE VALVE 4IN 150# WCB" data-desc2="GATE VALVE 4IN 600# WCB" data-uom1="EA" data-uom2="EA">Scenario B: Hazardous Pressure Contradiction (Blocked!)</button>
+              <button class="btn btn-sm btn-outline compare-preset-btn" data-desc1="FLANGE WN 2IN 300# ASTM A105" data-desc2="FLANGE WN 2IN 300# SS 316" data-uom1="EA" data-uom2="EA">Scenario C: Incompatible Alloy Grade (Blocked!)</button>
+            </div>
+
+            <div class="compare-input-grid">
+              <div class="compare-input-card">
+                <h4>CPSE Record A (e.g. ONGC)</h4>
+                <div class="form-group">
+                  <label>Description:</label>
+                  <input type="text" id="compare-desc-a" class="text-input" value="BALL VALVE 2IN 150# CS WCB">
+                </div>
+                <div class="form-group">
+                  <label>UOM:</label>
+                  <input type="text" id="compare-uom-a" class="text-input" value="EA" style="max-width: 100px;">
+                </div>
+              </div>
+              <div class="compare-input-card">
+                <h4>CPSE Record B (e.g. IOCL)</h4>
+                <div class="form-group">
+                  <label>Description:</label>
+                  <input type="text" id="compare-desc-b" class="text-input" value="2 INCH 150 LB WCB BALL VALVE">
+                </div>
+                <div class="form-group">
+                  <label>UOM:</label>
+                  <input type="text" id="compare-uom-b" class="text-input" value="EA" style="max-width: 100px;">
+                </div>
+              </div>
+            </div>
+
+            <div class="text-center mt-3">
+              <button id="live-compare-btn" class="btn btn-primary btn-lg">⚡ Run Multi-Signal AI Comparison</button>
+            </div>
+
+            <!-- Live Matcher Output Area -->
+            <div id="live-compare-output" class="sandbox-output-box mt-3" style="display: none;">
+              <!-- Dynamic content populated by JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Section: Active Learning Loop & Self-Improvement -->
+        <div class="card mb-4">
+          <div class="card-header flex-between">
+            <div>
+              <h3>Active Learning Loop &amp; Neural Self-Improvement</h3>
+              <p class="card-subtitle">Constitutional Axiom: <em>"AI Recommends; Authorized Human Governance Approves."</em> Every human steward decision mints labeled training triplets for PyTorch fine-tuning.</p>
+            </div>
+            <span class="badge badge-success">Offline PyTorch Pipeline</span>
+          </div>
+          <div class="card-body">
+            <div class="score-summary-grid mb-3">
+              <div class="score-mini-card">
+                <div class="score-label">Pearson Correlation</div>
+                <div class="score-val" style="color:#16a34a;">96.28%</div>
+                <div class="band-desc">Near-perfect agreement with human catalogers</div>
+              </div>
+              <div class="score-mini-card">
+                <div class="score-label">Spearman Rank</div>
+                <div class="score-val" style="color:#2563eb;">86.60%</div>
+                <div class="band-desc">Best matches reliably rank at the top</div>
+              </div>
+              <div class="score-mini-card">
+                <div class="score-label">Evaluation Loss</div>
+                <div class="score-val" style="color:#7c3aed;">0.0169</div>
+                <div class="band-desc">MultipleNegativesRankingLoss across 10,019 pairs</div>
+              </div>
+              <div class="score-mini-card">
+                <div class="score-label">Safety Guarantee</div>
+                <div class="score-val" style="color:#dc2626;">100%</div>
+                <div class="band-desc">Physics Capped by Deterministic Safety Bouncer</div>
+              </div>
+            </div>
+
+            <div class="flex-between p-3" style="background:var(--bg-secondary); border-radius:8px;">
+              <div>
+                <strong>Active Triplet Buffer:</strong> <span id="active-triplet-count">Loading...</span> labeled steward decisions captured.
+                <div class="text-muted" style="font-size:12px;">Format: (Anchor Material, Positive Match, Hard Negative)</div>
+              </div>
+              <button id="sync-active-learning-btn" class="btn btn-secondary btn-sm">🔄 Trigger Fine-Tuning Sync</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step-by-Step Operator Guide -->
+        <div class="card">
+          <div class="card-header">
+            <h3>Standard Operating Procedure (SOP) for Material Stewards</h3>
+          </div>
+          <div class="card-body">
+            <div class="sop-steps-grid">
+              <div class="sop-card">
+                <div class="sop-badge">Step 1</div>
+                <h4>Upload or Ingest Catalogs</h4>
+                <p>Navigate to <strong>Catalog Ingestion</strong>. Upload your CPSE Excel/CSV or click "Load 500-Item Industrial Benchmark Dataset". Raw data is archived immutably with SHA-256 hashing.</p>
+              </div>
+              <div class="sop-card">
+                <div class="sop-badge">Step 2</div>
+                <h4>Trigger Cross-CPSE Matching</h4>
+                <p>Go to <strong>AI Equivalence Workbench</strong> and click "Run Cross-CPSE AI Matching". FAISS KNN indexes semantic vectors and evaluates all attribute pairs for contradictions.</p>
+              </div>
+              <div class="sop-card">
+                <div class="sop-badge">Step 3</div>
+                <h4>Review &amp; Approve Groups</h4>
+                <p>Filter proposed groups by confidence band. Check matched attributes and contradiction alerts. Click "Review Decision" to approve <code>MERGE</code>, <code>MAP</code>, or <code>RETAIN</code> with a technical justification.</p>
+              </div>
+              <div class="sop-card">
+                <div class="sop-badge">Step 4</div>
+                <h4>Verify CNMC &amp; Export ERP Mapping</h4>
+                <p>Inspect generated national records in <strong>National CNMC Registry</strong>. Head to <strong>SAP / ERP Migration Export</strong> to download RFC-compliant CSV cross-reference tables.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab 2: Catalog Ingestion -->
+      <section id="tab-ingestion" class="tab-pane">
+        <div class="section-intro">
+          <h2>Catalog Ingestion Console</h2>
+          <p>Import material catalogs in CSV or Excel format. Raw CPSE records are stored immutably, and row-level errors are isolated without failing valid rows.</p>
+        </div>
+
+        <div class="ingestion-grid">
+          <!-- Upload Form -->
+          <div class="card">
+            <div class="card-header">
+              <h3>Upload Material Catalog</h3>
+            </div>
+            <div class="card-body">
+              <form id="ingestion-form">
+                <div class="form-group">
+                  <label for="cpse-select">Target CPSE Entity:</label>
+                  <select id="cpse-select" class="select-input" required>
+                    <option value="ONGC">Oil and Natural Gas Corporation (ONGC)</option>
+                    <option value="IOCL">Indian Oil Corporation Limited (IOCL)</option>
+                    <option value="GAIL">GAIL (India) Limited</option>
+                    <option value="BPCL">Bharat Petroleum Corporation Limited (BPCL)</option>
+                    <option value="HPCL">Hindustan Petroleum Corporation Limited (HPCL)</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label>Catalog File (CSV or Excel):</label>
+                  <div id="drop-zone" class="drop-zone">
+                    <span class="drop-icon">📁</span>
+                    <p>Drag & drop catalog file here, or click to browse</p>
+                    <span class="file-hint">Supports .csv, .xlsx, .xls with source_material_code, description, uom</span>
+                    <input type="file" id="file-input" accept=".csv,.xlsx,.xls" style="display: none;">
+                  </div>
+                  <div id="selected-file-name" class="selected-file-label"></div>
+                </div>
+
+                <div class="form-actions" style="flex-wrap: wrap;">
+                  <button type="submit" id="upload-btn" class="btn btn-primary" disabled>Upload & Validate Catalog</button>
+                  <button type="button" id="load-500-btn" class="btn btn-primary" style="background-color: #0d9488;">⚡ Load 500-Row Industrial Benchmark (v2 Strategy)</button>
+                  <button type="button" id="load-sample-btn" class="btn btn-secondary">Load 3-CPSE Sample Catalogs</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- Ingestion Results & Errors -->
+          <div class="card">
+            <div class="card-header">
+              <h3>Batch Ingestion Report</h3>
+            </div>
+            <div class="card-body">
+              <div id="ingestion-result-placeholder" class="empty-state">
+                Upload a catalog or click "Load Benchmark Test Data" to see row-level validation reports.
+              </div>
+              <div id="ingestion-result-details" style="display: none;">
+                <div class="report-summary-bar">
+                  <span class="stat-pill success" id="report-success">0 Ingested</span>
+                  <span class="stat-pill danger" id="report-failed">0 Errors</span>
+                  <span class="stat-pill" id="report-batch-id">Batch: -</span>
+                </div>
+                <div id="report-error-table-container">
+                  <h4>Validation Errors</h4>
+                  <table class="data-table">
+                    <thead>
+                      <tr><th>Row #</th><th>Field</th><th>Issue Description</th></tr>
+                    </thead>
+                    <tbody id="report-error-tbody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Ingested Materials -->
+        <div class="card mt-4">
+          <div class="card-header flex-between">
+            <h3>Harmonized Source Material Records</h3>
+            <span class="badge" id="source-table-count">0 items</span>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>CPSE</th>
+                    <th>Source Code</th>
+                    <th>Source Description</th>
+                    <th>UOM</th>
+                    <th>Extracted Noun</th>
+                    <th>Dimensions</th>
+                    <th>Grade / Material</th>
+                    <th>Rating / Class</th>
+                    <th>Standardized Canonical Title</th>
+                  </tr>
+                </thead>
+                <tbody id="materials-tbody">
+                  <tr><td colspan="9" class="text-center">No materials ingested yet.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab 3: AI Workbench -->
+      <section id="tab-workbench" class="tab-pane">
+        <div class="section-intro flex-between">
+          <div>
+            <h2>AI Equivalence & Matching Workbench</h2>
+            <p>Cross-catalog candidate retrieval and hybrid multi-signal scoring. High vector similarity does not bypass technical attribute conflict checks.</p>
+          </div>
+          <button id="run-matching-btn" class="btn btn-primary">🚀 Run Cross-CPSE AI Matching</button>
+        </div>
+
+        <div class="filter-bar">
+          <div class="filter-group">
+            <label>Filter by Status:</label>
+            <select id="group-status-filter" class="select-input">
+              <option value="">All Statuses</option>
+              <option value="PROPOSED" selected>PROPOSED (Pending Review)</option>
+              <option value="APPROVED">APPROVED</option>
+              <option value="REJECTED">REJECTED</option>
+              <option value="SPLIT">SPLIT</option>
+              <option value="UNDER_REVIEW">UNDER_REVIEW</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Confidence Band:</label>
+            <select id="workbench-confidence-filter" class="select-input">
+              <option value="">All Bands</option>
+              <option value="HIGH">High (&ge; 85%)</option>
+              <option value="MEDIUM">Medium (65% - 85%)</option>
+              <option value="LOW">Low (&lt; 65%)</option>
+            </select>
+          </div>
+          <div class="filter-group" style="flex-grow: 1; max-width: 340px;">
+            <input type="text" id="workbench-search-input" class="search-input" placeholder="Quick search groups (e.g. valve, ONGC, 150#)...">
+          </div>
+          <span class="group-count-badge" id="group-count-badge">0 Equivalence Groups</span>
+        </div>
+
+        <div id="equivalence-groups-container" class="groups-container">
+          <div class="empty-state">No equivalence groups found. Ingest catalogs and click "Run Cross-CPSE AI Matching".</div>
+        </div>
+      </section>
+
+      <!-- Tab 4: National CNMC Registry -->
+      <section id="tab-canonical" class="tab-pane">
+        <div class="section-intro">
+          <h2>National Canonical Material Registry (CNMC)</h2>
+          <p>The single source of governed truth across the petroleum sector. Every approved CNMC maintains traceability to participating local CPSE codes.</p>
+        </div>
+
+        <div class="search-bar">
+          <input type="text" id="cnmc-search-input" class="search-input" placeholder="Search by CNMC code (e.g. CNMC-VAL-2026-00001) or description...">
+          <button id="cnmc-search-btn" class="btn btn-secondary">Search</button>
+        </div>
+
+        <div class="card">
+          <div class="card-header flex-between">
+            <h3>Registered Common National Material Codes</h3>
+            <span class="badge" id="cnmc-count-badge">0 CNMCs</span>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>CNMC Code</th>
+                    <th>Canonical Description</th>
+                    <th>UNSPSC Classification</th>
+                    <th>Status</th>
+                    <th>Version</th>
+                    <th>Approved By</th>
+                    <th>Approved Date</th>
+                  </tr>
+                </thead>
+                <tbody id="cnmc-tbody">
+                  <tr><td colspan="7" class="text-center">No canonical materials minted yet. Review and approve equivalence groups in the workbench.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab 5: Governance & Audit -->
+      <section id="tab-audit" class="tab-pane">
+        <div class="section-intro">
+          <h2>Governance & Immutable Audit Trail</h2>
+          <p>Every human stewardship decision, algorithm proposal, and code allocation is permanently recorded with full before/after snapshots and rationale.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3>Chronological Audit Events</h3>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Timestamp</th>
+                    <th>Actor</th>
+                    <th>Action</th>
+                    <th>Target Object</th>
+                    <th>Rule Version</th>
+                    <th>Details / Provenance</th>
+                  </tr>
+                </thead>
+                <tbody id="audit-tbody">
+                  <tr><td colspan="6" class="text-center">No audit events recorded yet.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab 6: ERP / SAP Export -->
+      <section id="tab-erp" class="tab-pane">
+        <div class="section-intro">
+          <h2>SAP / ERP Migration Export Adapter</h2>
+          <p>Generate standardized migration payloads for CPSE enterprise resource planning systems (SAP ECC / S/4HANA / Oracle ERP).</p>
+        </div>
+
+        <div class="export-actions-bar card mb-4">
+          <div class="card-body flex-between">
+            <div>
+              <h3>Download Approved Migration Payload</h3>
+              <p>Export all approved local CPSE codes mapped to national CNMC codes in production-ready schema.</p>
+            </div>
+            <div class="btn-group">
+              <button id="export-csv-btn" class="btn btn-primary">📥 Export as CSV</button>
+              <button id="export-excel-btn" class="btn btn-secondary">📊 Export as Excel (.xlsx)</button>
+              <button id="export-json-btn" class="btn btn-outline">{} Export as JSON</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header flex-between">
+            <h3>Export Schema Preview</h3>
+            <span class="badge badge-success">SAP BAPI / RFC Ready</span>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>CPSE_ID</th>
+                    <th>SOURCE_SYSTEM</th>
+                    <th>SOURCE_MATERIAL_CODE</th>
+                    <th>TARGET_CNMC</th>
+                    <th>CANONICAL_DESCRIPTION</th>
+                    <th>CLASSIFICATION</th>
+                    <th>MAPPING_STATUS</th>
+                    <th>RATIONALIZATION_ACTION</th>
+                    <th>EFFECTIVE_DATE</th>
+                  </tr>
+                </thead>
+                <tbody id="erp-tbody">
+                  <tr><td colspan="9" class="text-center">No approved mappings ready for export. Approve equivalence groups in the workbench first.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Review Reason Modal -->
+  <div id="review-modal" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="modal-title">Steward Review Decision</h3>
+        <button id="modal-close-btn" class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="modal-group-summary" class="modal-desc"></p>
+        <div class="form-group">
+          <label for="review-action-select">Decision Action:</label>
+          <select id="review-action-select" class="select-input">
+            <option value="MERGE">MERGE - Consolidate into single canonical CNMC</option>
+            <option value="MAP">MAP - Map to existing approved CNMC</option>
+            <option value="RETAIN">RETAIN - Keep separate (different technical spec)</option>
+            <option value="RETIRE">RETIRE - Flag legacy CPSE item for retirement</option>
+            <option value="SPLIT">SPLIT - Divide group into separate candidates</option>
+            <option value="REVIEW">REVIEW - Escalate for higher committee analysis</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="review-reason-input">Stewardship Rationale / Justification <span class="req">*</span>:</label>
+          <textarea id="review-reason-input" class="textarea-input" rows="3" placeholder="Enter technical explanation (e.g. Dimensions, rating and ASTM specifications confirmed identical across catalogs)..."></textarea>
+        </div>
+        <div class="form-group" id="custom-cnmc-group" style="display: none;">
+          <label for="custom-cnmc-input">Custom / Pre-allocated CNMC (Optional):</label>
+          <input type="text" id="custom-cnmc-input" class="text-input" placeholder="Leave empty for auto-generated collision-safe CNMC">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="modal-cancel-btn" class="btn btn-secondary">Cancel</button>
+        <button id="modal-submit-btn" class="btn btn-primary">Commit Governed Decision</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

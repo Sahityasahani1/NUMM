@@ -14,20 +14,31 @@ env/
 # Environment variables
 .env
 
-# Word documents (SRS, PRD, docs)
+# Dependencies & Build Artefacts
+node_modules/
+frontend/node_modules/
+frontend/dist/
+dist/
+
+# SQLite runtime databases (uncomment if you wish to track seed data)
+# *.db
+
+# Word documents & PPTX rules
+# Ensure documents in words/ and frontend/public/ are tracked
 *.doc
 *.docx
 *.docm
 *.dotx
 ~$*.doc*
-!public/*.docx
-!docs/*.docx
+~$*.ppt*
+!words/*.docx
+!words/*.pptx
+!frontend/public/*.docx
+!frontend/public/*.pptx
 
 # IDE files
 .vscode/
-
-
-# Antigravity IDE agent files
+.idea/
 .agents/
 
 # Operating system files
@@ -41,17 +52,3 @@ desktop.ini
 
 # Logs
 *.log
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-.pytest_cache/
-
-# Node / frontend
-node_modules/
-dist/
-.cache/
-
-# SQLite databases
-*.db

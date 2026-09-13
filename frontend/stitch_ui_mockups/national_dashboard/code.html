@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>National Dashboard - Unified Material Master</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-high": "#292a2a",
+                        "inverse-primary": "#006b55",
+                        "status-error": "#EF4444",
+                        "secondary-container": "#494c4f",
+                        "primary": "#c2ffe8",
+                        "on-secondary-fixed": "#191c1f",
+                        "surface": "#131314",
+                        "on-secondary-fixed-variant": "#44474a",
+                        "outline": "#87948e",
+                        "secondary-fixed": "#e1e2e6",
+                        "on-tertiary": "#2d3136",
+                        "relationship-near": "#FBBF24",
+                        "inverse-surface": "#e4e2e2",
+                        "tertiary-fixed-dim": "#c3c7cd",
+                        "on-surface-variant": "#bdc9c3",
+                        "secondary": "#c5c6ca",
+                        "primary-container": "#7fe9c8",
+                        "surface-container-highest": "#343535",
+                        "status-success": "#10B981",
+                        "error": "#ffb4ab",
+                        "on-secondary": "#2e3134",
+                        "on-error": "#690005",
+                        "on-tertiary-fixed-variant": "#43474c",
+                        "surface-bright": "#393939",
+                        "on-tertiary-fixed": "#181c21",
+                        "surface-dim": "#131314",
+                        "status-warning": "#F59E0B",
+                        "on-error-container": "#ffdad6",
+                        "surface-tint": "#6fd9b9",
+                        "on-secondary-container": "#babcc0",
+                        "outline-variant": "#3d4944",
+                        "surface-container-lowest": "#0d0e0e",
+                        "primary-fixed-dim": "#6fd9b9",
+                        "on-background": "#e4e2e2",
+                        "relationship-identical": "#7FE9C8",
+                        "tertiary": "#f0f2f9",
+                        "primary-fixed": "#8cf6d4",
+                        "on-primary-fixed-variant": "#00513f",
+                        "surface-variant": "#343535",
+                        "surface-container-low": "#1b1c1c",
+                        "status-info": "#3B82F6",
+                        "secondary-fixed-dim": "#c5c6ca",
+                        "surface-container": "#1f2020",
+                        "background": "#131314",
+                        "slate-navy": "#14171A",
+                        "on-surface": "#e4e2e2",
+                        "on-primary-container": "#006953",
+                        "tertiary-container": "#d3d6dc",
+                        "on-tertiary-container": "#595d62",
+                        "error-container": "#93000a",
+                        "on-primary-fixed": "#002118",
+                        "tertiary-fixed": "#e0e2e9",
+                        "on-primary": "#00382b",
+                        "relationship-duplicate": "#60A5FA",
+                        "inverse-on-surface": "#303031"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "row-height-dense": "32px",
+                        "unit": "4px",
+                        "margin-page": "24px",
+                        "drawer-width-lg": "600px",
+                        "row-height-standard": "44px",
+                        "drawer-width-sm": "400px",
+                        "gutter": "12px"
+                    },
+                    "fontFamily": {
+                        "display-cnmc": ["IBM Plex Sans"],
+                        "headline-section": ["IBM Plex Sans"],
+                        "data-mono": ["JetBrains Mono"],
+                        "body-bold": ["IBM Plex Sans"],
+                        "table-header": ["IBM Plex Sans"],
+                        "body-standard": ["IBM Plex Sans"],
+                        "label-caps": ["IBM Plex Sans"]
+                    },
+                    "fontSize": {
+                        "display-cnmc": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "headline-section": ["18px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "data-mono": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+                        "body-bold": ["13px", { "lineHeight": "18px", "fontWeight": "600" }],
+                        "table-header": ["12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600" }],
+                        "body-standard": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "label-caps": ["11px", { "lineHeight": "14px", "letterSpacing": "0.05em", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: theme('colors.slate-navy'); color: theme('colors.on-surface'); }
+        .glass-panel { background: rgba(30, 33, 36, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(105, 105, 105, 0.2); }
+    </style>
+</head>
+<body class="font-body-standard flex h-screen overflow-hidden">
+<!-- SideNavBar -->
+<nav class="fixed left-0 top-0 h-full w-[240px] bg-surface dark:bg-surface flex flex-col border-r border-outline-variant dark:border-outline-variant z-50">
+<div class="p-4 border-b border-outline-variant dark:border-outline-variant flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary-container" data-icon="inventory_2">inventory_2</span>
+</div>
+<div>
+<h1 class="font-headline-section text-headline-section text-on-surface dark:text-on-surface leading-tight">National Unified Master</h1>
+<p class="font-data-mono text-data-mono text-on-surface-variant">Material Management</p>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto py-4">
+<ul class="space-y-1">
+<!-- Active Item -->
+<li>
+<a class="flex items-center px-4 py-2 text-primary dark:text-primary-fixed-dim font-body-bold border-l-2 border-primary hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors opacity-80" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="dashboard">dashboard</span>
+                        Overview
+                    </a>
+</li>
+<!-- Inactive Items -->
+<li>
+<a class="flex items-center px-4 py-2 text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors border-l-2 border-transparent" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="database">database</span>
+                        CPSE Data Hub
+                    </a>
+</li>
+<li>
+<a class="flex items-center px-4 py-2 text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors border-l-2 border-transparent" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="rebase_edit">rebase_edit</span>
+                        Material Harmonization
+                    </a>
+</li>
+<li>
+<a class="flex items-center px-4 py-2 text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors border-l-2 border-transparent" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="inventory_2">inventory_2</span>
+                        National Material Master
+                    </a>
+</li>
+<li>
+<a class="flex items-center px-4 py-2 text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors border-l-2 border-transparent" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="fact_check">fact_check</span>
+                        Review Queue
+                    </a>
+</li>
+<li>
+<a class="flex items-center px-4 py-2 text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors border-l-2 border-transparent" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="move_up">move_up</span>
+                        Rationalization &amp; Migration
+                    </a>
+</li>
+<li>
+<a class="flex items-center px-4 py-2 text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors border-l-2 border-transparent" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="monitoring">monitoring</span>
+                        Analytics
+                    </a>
+</li>
+<li>
+<a class="flex items-center px-4 py-2 text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors border-l-2 border-transparent" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="gavel">gavel</span>
+                        Governance
+                    </a>
+</li>
+</ul>
+</div>
+<div class="p-4 border-t border-outline-variant dark:border-outline-variant">
+<ul class="space-y-1">
+<li>
+<a class="flex items-center px-4 py-2 text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors border-l-2 border-transparent" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="settings">settings</span>
+                        Settings
+                    </a>
+</li>
+<li>
+<a class="flex items-center px-4 py-2 text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors border-l-2 border-transparent" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="help">help</span>
+                        Support
+                    </a>
+</li>
+</ul>
+</div>
+</nav>
+<!-- Main Content Wrapper -->
+<div class="flex-1 ml-[240px] flex flex-col h-full bg-slate-navy">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center w-full px-margin-page h-row-height-standard border-b border-outline-variant dark:border-outline-variant z-40 bg-surface dark:bg-surface shrink-0">
+<div class="flex items-center gap-6">
+<!-- Navigation Links for Top Bar (as per JSON, though usually secondary to side nav in this layout) -->
+<nav class="hidden md:flex gap-4 h-full items-end">
+<a class="text-primary dark:text-primary border-b-2 border-primary pb-1 hover:text-on-surface dark:hover:text-on-surface transition-all" href="#">Dashboard</a>
+<a class="text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface transition-all pb-1 border-b-2 border-transparent" href="#">Harmonization</a>
+<a class="text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface transition-all pb-1 border-b-2 border-transparent" href="#">Governance</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative focus-within:ring-1 focus-within:ring-primary rounded">
+<span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm" data-icon="search">search</span>
+<input class="bg-surface-container-high border-none text-on-surface text-sm pl-8 pr-3 py-1 rounded w-64 font-data-mono focus:ring-0" placeholder="Search CNMC..." type="text"/>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant">
+<button class="hover:text-on-surface transition-colors"><span class="material-symbols-outlined" data-icon="notifications">notifications</span></button>
+<button class="hover:text-on-surface transition-colors"><span class="material-symbols-outlined" data-icon="history">history</span></button>
+<button class="hover:text-on-surface transition-colors"><span class="material-symbols-outlined" data-icon="admin_panel_settings">admin_panel_settings</span></button>
+</div>
+<div class="w-8 h-8 rounded-full bg-surface-container-high border border-outline-variant overflow-hidden">
+<img alt="Administrator Avatar" class="w-full h-full object-cover" data-alt="A detailed headshot of a professional systems administrator in a dimly lit, high-tech control room setting. The lighting is cool and moody, emphasizing the dark theme aesthetic. The administrator wears modern, minimalist attire. The overall tone is serious, authoritative, and strictly professional." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD4hKireRdQNGDHp4sPcP5DSnDPHF7Z6j4WPxNEolAUbh3YbElj8WNACWl2-WONsr48bH9zmiapFo8s6TWCOytbHW3O63Mt4fn-4ApAddgU6mSPOTiu-6150AGLrA30uPZSAKYs2Z8sv5bHCTTtjjtbvWyCF7OAxv4I9dH98sKCZl0T8gqUtcIi2QmL6K0g5uz4K8A1GjPE-SC6N_zbYoqZ__XgqsvIdVkp9KKm3OHxc_Z2jcXJriY"/>
+</div>
+</div>
+</header>
+<!-- Scrollable Dashboard Content -->
+<main class="flex-1 overflow-y-auto p-margin-page">
+<!-- KPI Row -->
+<div class="grid grid-cols-4 gap-gutter mb-6">
+<!-- KPI 1 -->
+<div class="bg-[#1E2124] rounded-lg p-4 border border-outline-variant/30 relative overflow-hidden">
+<div class="absolute -right-4 -top-4 text-surface-container-high opacity-20">
+<span class="material-symbols-outlined text-[100px]" data-icon="dataset">dataset</span>
+</div>
+<div class="relative z-10">
+<p class="font-label-caps text-label-caps text-on-surface-variant mb-1">TOTAL SOURCE CODES</p>
+<h2 class="font-display-cnmc text-display-cnmc text-on-surface">14,285,902</h2>
+<div class="flex items-center mt-2 text-status-success font-data-mono text-data-mono">
+<span class="material-symbols-outlined text-[14px] mr-1" data-icon="trending_up">trending_up</span>
+                            +12.4% (YTD)
+                        </div>
+</div>
+</div>
+<!-- KPI 2 -->
+<div class="bg-[#1E2124] rounded-lg p-4 border border-outline-variant/30 relative overflow-hidden">
+<div class="absolute -right-4 -top-4 text-surface-container-high opacity-20">
+<span class="material-symbols-outlined text-[100px]" data-icon="inventory_2">inventory_2</span>
+</div>
+<div class="relative z-10">
+<p class="font-label-caps text-label-caps text-on-surface-variant mb-1">CANONICAL MATERIALS (CNMC)</p>
+<h2 class="font-display-cnmc text-display-cnmc text-primary">3,102,445</h2>
+<div class="flex items-center mt-2 text-on-surface-variant font-data-mono text-data-mono">
+<span class="material-symbols-outlined text-[14px] mr-1" data-icon="check_circle">check_circle</span>
+                            Approved Masters
+                        </div>
+</div>
+</div>
+<!-- KPI 3 -->
+<div class="bg-[#1E2124] rounded-lg p-4 border border-outline-variant/30 relative overflow-hidden">
+<div class="absolute -right-4 -top-4 text-surface-container-high opacity-20">
+<span class="material-symbols-outlined text-[100px]" data-icon="donut_large">donut_large</span>
+</div>
+<div class="relative z-10">
+<p class="font-label-caps text-label-caps text-on-surface-variant mb-1">MAPPING COVERAGE</p>
+<h2 class="font-display-cnmc text-display-cnmc text-on-surface">78.4%</h2>
+<div class="w-full bg-surface-container-high h-1.5 mt-3 rounded-full overflow-hidden">
+<div class="bg-relationship-identical h-full" style="width: 78.4%"></div>
+</div>
+</div>
+</div>
+<!-- KPI 4 -->
+<div class="bg-[#1E2124] rounded-lg p-4 border border-primary/50 relative overflow-hidden shadow-[0_0_15px_rgba(111,217,185,0.1)]">
+<div class="absolute -right-4 -top-4 text-surface-container-high opacity-20">
+<span class="material-symbols-outlined text-[100px]" data-icon="fact_check">fact_check</span>
+</div>
+<div class="relative z-10 flex justify-between items-start">
+<div>
+<p class="font-label-caps text-label-caps text-on-surface-variant mb-1">REVIEW BACKLOG</p>
+<h2 class="font-display-cnmc text-display-cnmc text-relationship-near">12,450</h2>
+</div>
+<span class="material-symbols-outlined text-relationship-near" data-icon="warning">warning</span>
+</div>
+<div class="flex items-center mt-2 text-relationship-near font-data-mono text-data-mono">
+                        Requires Action
+                    </div>
+</div>
+</div>
+<!-- Main Dashboard Bento Grid -->
+<div class="grid grid-cols-12 gap-gutter">
+<!-- Mapping Health Chart (Span 8) -->
+<div class="col-span-8 bg-[#1E2124] rounded-lg border border-outline-variant/30 flex flex-col">
+<div class="p-4 border-b border-outline-variant/30 flex justify-between items-center">
+<h3 class="font-headline-section text-headline-section text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-status-info text-sm" data-icon="auto_graph">auto_graph</span>
+                            Mapping Health Trend
+                        </h3>
+<div class="flex gap-2">
+<span class="px-2 py-1 rounded bg-surface-container-high text-on-surface-variant font-data-mono text-[10px]">Duplicates Detected</span>
+<span class="px-2 py-1 rounded bg-primary-container/20 text-primary font-data-mono text-[10px]">Approved CNMCs</span>
+</div>
+</div>
+<div class="p-4 flex-1 min-h-[250px] relative flex items-end gap-2">
+<!-- Abstracted Chart Representation -->
+<div class="absolute inset-0 p-4 flex flex-col justify-between pointer-events-none opacity-20 border-l border-b border-outline-variant/50 ml-4 mb-4">
+<div class="w-full border-b border-outline-variant/50 border-dashed"></div>
+<div class="w-full border-b border-outline-variant/50 border-dashed"></div>
+<div class="w-full border-b border-outline-variant/50 border-dashed"></div>
+</div>
+<!-- Bars -->
+<div class="w-full h-full flex items-end justify-around pb-4 pl-4 z-10">
+<!-- Week 1 -->
+<div class="flex flex-col items-center gap-1 w-12">
+<div class="flex items-end gap-1 w-full h-[180px] bg-transparent">
+<div class="w-1/2 bg-relationship-duplicate/40 h-[60%] rounded-t-sm"></div>
+<div class="w-1/2 bg-relationship-identical h-[40%] rounded-t-sm"></div>
+</div>
+<span class="font-data-mono text-[10px] text-on-surface-variant">W1</span>
+</div>
+<!-- Week 2 -->
+<div class="flex flex-col items-center gap-1 w-12">
+<div class="flex items-end gap-1 w-full h-[180px] bg-transparent">
+<div class="w-1/2 bg-relationship-duplicate/40 h-[70%] rounded-t-sm"></div>
+<div class="w-1/2 bg-relationship-identical h-[45%] rounded-t-sm"></div>
+</div>
+<span class="font-data-mono text-[10px] text-on-surface-variant">W2</span>
+</div>
+<!-- Week 3 -->
+<div class="flex flex-col items-center gap-1 w-12">
+<div class="flex items-end gap-1 w-full h-[180px] bg-transparent">
+<div class="w-1/2 bg-relationship-duplicate/40 h-[50%] rounded-t-sm"></div>
+<div class="w-1/2 bg-relationship-identical h-[65%] rounded-t-sm"></div>
+</div>
+<span class="font-data-mono text-[10px] text-on-surface-variant">W3</span>
+</div>
+<!-- Week 4 -->
+<div class="flex flex-col items-center gap-1 w-12">
+<div class="flex items-end gap-1 w-full h-[180px] bg-transparent">
+<div class="w-1/2 bg-relationship-duplicate/40 h-[40%] rounded-t-sm"></div>
+<div class="w-1/2 bg-relationship-identical h-[85%] rounded-t-sm"></div>
+</div>
+<span class="font-data-mono text-[10px] text-on-surface-variant">W4</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Rationalization Progress (Span 4) -->
+<div class="col-span-4 bg-[#1E2124] rounded-lg border border-outline-variant/30 flex flex-col">
+<div class="p-4 border-b border-outline-variant/30">
+<h3 class="font-headline-section text-headline-section text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-on-surface-variant" data-icon="move_up">move_up</span>
+                            Action Progress
+                        </h3>
+</div>
+<div class="p-4 flex flex-col justify-center gap-6 flex-1">
+<div>
+<div class="flex justify-between mb-1">
+<span class="font-body-bold text-body-bold text-on-surface">MAP to Existing CNMC</span>
+<span class="font-data-mono text-data-mono text-on-surface-variant">65%</span>
+</div>
+<div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+<div class="bg-status-info h-full w-[65%]"></div>
+</div>
+<p class="font-data-mono text-[10px] text-on-surface-variant mt-1 text-right">4.5M records</p>
+</div>
+<div>
+<div class="flex justify-between mb-1">
+<span class="font-body-bold text-body-bold text-on-surface">MERGE Duplicates</span>
+<span class="font-data-mono text-data-mono text-on-surface-variant">42%</span>
+</div>
+<div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+<div class="bg-relationship-near h-full w-[42%]"></div>
+</div>
+<p class="font-data-mono text-[10px] text-on-surface-variant mt-1 text-right">1.2M records</p>
+</div>
+<div>
+<div class="flex justify-between mb-1">
+<span class="font-body-bold text-body-bold text-on-surface">RETIRE Obsolete</span>
+<span class="font-data-mono text-data-mono text-on-surface-variant">88%</span>
+</div>
+<div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+<div class="bg-outline h-full w-[88%]"></div>
+</div>
+<p class="font-data-mono text-[10px] text-on-surface-variant mt-1 text-right">800k records</p>
+</div>
+</div>
+</div>
+<!-- Duplicate Candidates Table (Span 6) -->
+<div class="col-span-6 bg-[#1E2124] rounded-lg border border-outline-variant/30 flex flex-col overflow-hidden">
+<div class="p-3 border-b border-outline-variant/30 flex justify-between items-center bg-[#2A2E33]">
+<h3 class="font-table-header text-table-header text-on-surface">TOP DUPLICATE CANDIDATES</h3>
+<button class="text-primary text-[11px] font-bold hover:underline">VIEW ALL</button>
+</div>
+<div class="flex-1 overflow-auto">
+<table class="w-full text-left border-collapse">
+<thead class="sticky top-0 bg-[#2A2E33] border-b border-outline-variant/50">
+<tr>
+<th class="p-2 font-table-header text-[10px] text-on-surface-variant tracking-wider">MAT. GROUP</th>
+<th class="p-2 font-table-header text-[10px] text-on-surface-variant tracking-wider">DESCRIPTION</th>
+<th class="p-2 font-table-header text-[10px] text-on-surface-variant tracking-wider text-right">CANDIDATES</th>
+<th class="p-2 font-table-header text-[10px] text-on-surface-variant tracking-wider text-center">AI CONFIDENCE</th>
+</tr>
+</thead>
+<tbody class="font-data-mono text-data-mono divide-y divide-outline-variant/20">
+<tr class="h-row-height-dense hover:bg-surface-container-high transition-colors">
+<td class="p-2 text-primary">MG-4022</td>
+<td class="p-2 text-on-surface truncate max-w-[150px]">Valves, Gate, Flanged</td>
+<td class="p-2 text-right text-relationship-duplicate">1,204</td>
+<td class="p-2 text-center">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-status-success/20 text-status-success text-[10px]">
+<span class="material-symbols-outlined text-[10px]" data-icon="sparkles">arrow_back_ios_new</span> 98%
+                                        </span>
+</td>
+</tr>
+<tr class="h-row-height-dense hover:bg-surface-container-high transition-colors">
+<td class="p-2 text-primary">MG-8810</td>
+<td class="p-2 text-on-surface truncate max-w-[150px]">Bearings, Roller, Tapered</td>
+<td class="p-2 text-right text-relationship-duplicate">856</td>
+<td class="p-2 text-center">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-status-success/20 text-status-success text-[10px]">
+<span class="material-symbols-outlined text-[10px]" data-icon="sparkles">arrow_back_ios_new</span> 94%
+                                        </span>
+</td>
+</tr>
+<tr class="h-row-height-dense hover:bg-surface-container-high transition-colors">
+<td class="p-2 text-primary">MG-1105</td>
+<td class="p-2 text-on-surface truncate max-w-[150px]">Pumps, Centrifugal, H-Stage</td>
+<td class="p-2 text-right text-relationship-duplicate">622</td>
+<td class="p-2 text-center">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-status-warning/20 text-status-warning text-[10px]">
+<span class="material-symbols-outlined text-[10px]" data-icon="sparkles">arrow_back_ios_new</span> 72%
+                                        </span>
+</td>
+</tr>
+<tr class="h-row-height-dense hover:bg-surface-container-high transition-colors">
+<td class="p-2 text-primary">MG-7742</td>
+<td class="p-2 text-on-surface truncate max-w-[150px]">Cable, Copper, Armored</td>
+<td class="p-2 text-right text-relationship-duplicate">410</td>
+<td class="p-2 text-center">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-status-success/20 text-status-success text-[10px]">
+<span class="material-symbols-outlined text-[10px]" data-icon="sparkles">arrow_back_ios_new</span> 91%
+                                        </span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- CPSE Coverage Matrix (Span 6) -->
+<div class="col-span-6 bg-[#1E2124] rounded-lg border border-outline-variant/30 flex flex-col overflow-hidden">
+<div class="p-3 border-b border-outline-variant/30 flex justify-between items-center bg-[#2A2E33]">
+<h3 class="font-table-header text-table-header text-on-surface">CPSE HARMONIZATION STATUS</h3>
+</div>
+<div class="p-4 flex-1">
+<div class="grid grid-cols-5 gap-2">
+<!-- Header Row -->
+<div class="col-span-2 font-table-header text-[10px] text-on-surface-variant">ENTITY</div>
+<div class="font-table-header text-[10px] text-on-surface-variant text-center">MAPPED</div>
+<div class="font-table-header text-[10px] text-on-surface-variant text-center">PENDING</div>
+<div class="font-table-header text-[10px] text-on-surface-variant text-center">STATUS</div>
+<!-- Row 1 -->
+<div class="col-span-2 font-data-mono text-xs text-on-surface flex items-center">ONGC</div>
+<div class="text-center font-data-mono text-xs text-on-surface-variant flex flex-col justify-center">
+<div class="w-full bg-surface-container-high h-1 mb-1"><div class="bg-relationship-identical h-full w-[90%]"></div></div>
+                                90%
+                            </div>
+<div class="text-center font-data-mono text-xs text-on-surface-variant flex flex-col justify-center">
+<div class="w-full bg-surface-container-high h-1 mb-1"><div class="bg-status-warning h-full w-[10%]"></div></div>
+                                10%
+                            </div>
+<div class="text-center flex justify-center items-center"><span class="material-symbols-outlined text-relationship-identical text-sm" data-icon="check_circle">check_circle</span></div>
+<!-- Row 2 -->
+<div class="col-span-2 font-data-mono text-xs text-on-surface flex items-center">NTPC</div>
+<div class="text-center font-data-mono text-xs text-on-surface-variant flex flex-col justify-center">
+<div class="w-full bg-surface-container-high h-1 mb-1"><div class="bg-relationship-identical h-full w-[65%]"></div></div>
+                                65%
+                            </div>
+<div class="text-center font-data-mono text-xs text-on-surface-variant flex flex-col justify-center">
+<div class="w-full bg-surface-container-high h-1 mb-1"><div class="bg-status-warning h-full w-[35%]"></div></div>
+                                35%
+                            </div>
+<div class="text-center flex justify-center items-center"><span class="material-symbols-outlined text-status-warning text-sm" data-icon="pending">pending</span></div>
+<!-- Row 3 -->
+<div class="col-span-2 font-data-mono text-xs text-on-surface flex items-center">BHEL</div>
+<div class="text-center font-data-mono text-xs text-on-surface-variant flex flex-col justify-center">
+<div class="w-full bg-surface-container-high h-1 mb-1"><div class="bg-relationship-identical h-full w-[40%]"></div></div>
+                                40%
+                            </div>
+<div class="text-center font-data-mono text-xs text-on-surface-variant flex flex-col justify-center">
+<div class="w-full bg-surface-container-high h-1 mb-1"><div class="bg-status-warning h-full w-[60%]"></div></div>
+                                60%
+                            </div>
+<div class="text-center flex justify-center items-center"><span class="material-symbols-outlined text-status-warning text-sm" data-icon="pending">pending</span></div>
+<!-- Row 4 -->
+<div class="col-span-2 font-data-mono text-xs text-on-surface flex items-center">SAIL</div>
+<div class="text-center font-data-mono text-xs text-on-surface-variant flex flex-col justify-center">
+<div class="w-full bg-surface-container-high h-1 mb-1"><div class="bg-relationship-identical h-full w-[85%]"></div></div>
+                                85%
+                            </div>
+<div class="text-center font-data-mono text-xs text-on-surface-variant flex flex-col justify-center">
+<div class="w-full bg-surface-container-high h-1 mb-1"><div class="bg-status-warning h-full w-[15%]"></div></div>
+                                15%
+                            </div>
+<div class="text-center flex justify-center items-center"><span class="material-symbols-outlined text-relationship-identical text-sm" data-icon="check_circle">check_circle</span></div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

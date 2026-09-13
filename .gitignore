@@ -23,16 +23,16 @@ dist/
 # SQLite runtime databases (uncomment if you wish to track seed data)
 # *.db
 
-# Word documents & PPTX rules
-# Ensure documents in words/ and frontend/public/ are tracked
+# Documents and presentations (stored locally, excluded from git repo)
 *.doc
 *.docx
 *.docm
 *.dotx
+*.pptx
+*.ppt
 ~$*.doc*
 ~$*.ppt*
-!words/*.docx
-!words/*.pptx
+words/
 !frontend/public/*.docx
 !frontend/public/*.pptx
 

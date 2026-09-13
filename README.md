@@ -48,13 +48,6 @@ The codebase is organized into 5 dedicated directories:
 │   ├── decision.md       # Architectural Decision Records (ADRs)
 │   └── AI_ML_ENHANCEMENT_REQUIREMENTS.md  # Neuro-symbolic pipeline specification
 │
-├── words/                # Official Word (.docx) & PowerPoint (.pptx) Documents
-│   ├── SIH26099_SRS_v4.0_Detailed_National_Unified_Material_Master.docx
-│   ├── SIH26099_Technical_PRD_v3.0_Detailed_National_Unified_Material_Master.docx
-│   ├── National_Unified_Material_Master_Project_Evaluation.docx
-│   ├── SIH26099_National_Unified_Material_Master_Presentation.pptx (6-Slide Deck)
-│   └── ... (All architectural and governance guides)
-│
 ├── run.py                # Standalone FastAPI server launcher
 ├── start-all.bat         # 1-Click launcher (starts Backend + Frontend + opens browser)
 ├── start-backend.bat     # Launches FastAPI on http://127.0.0.1:8000
